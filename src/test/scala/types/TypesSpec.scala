@@ -26,96 +26,94 @@ import scalafy.types.extractors._
 object TypesSpec extends Specification {
 
   "The types package" should {
-    "support extactors for matching List types" in {
+    "support reifiable types" in {
       // Positive test
-      (ReifiableList("foo", "bar") match { 
-        case l if (ReifiableList.isListOf(l, manifest[String])) => "match" 
+      (Reifiable(List("foo", "bar")) match { 
+        case l if (l.isTypeOf[List[String]]) => "match" 
         case _ => "no match"
       }).mustEqual("match")
       // Negative test
-      (ReifiableList(1, 2) match { 
-        case l if (ReifiableList.isListOf(l, manifest[String])) => "match" 
+      (Reifiable(List(1, 2)) match { 
+        case l if (l.isTypeOf[List[String]]) => "match" 
         case _ => "no match"
       }).mustEqual("no match")
 
       // Positive test
-      (ReifiableList(List("foo", "bar")) match { 
-        case l if (ReifiableList.isListOf(l, manifest[List[String]])) => 
+      (Reifiable(List(List("foo", "bar"))) match { 
+        case l if (l.isTypeOf[List[List[String]]]) => 
           "match"
         case _ => "no match"
       }).mustEqual("match")
       // Negative test 
-      (ReifiableList(List(1, 2)) match { 
-        case l if (ReifiableList.isListOf(l, manifest[List[String]])) => 
+      (Reifiable(List(List(1, 2))) match { 
+        case l if (l.isTypeOf[List[List[String]]]) => 
           "match"
         case _ => "no match"
       }).mustEqual("no match")
  
       // Positive test
-      (ReifiableList(List(1, 2)) match { 
-        case l if (ReifiableList.isListOf(l, manifest[List[Int]])) => 
+      (Reifiable(List(List(1, 2))) match { 
+        case l if (l.isTypeOf[List[List[Int]]]) => 
           "match"
         case _ => "no match"
       }).mustEqual("match")
       // Negative test 
-      (ReifiableList(List("foo", "bar")) match { 
-        case l if (ReifiableList.isListOf(l, manifest[List[Int]])) => 
+      (Reifiable(List(List("foo", "bar"))) match { 
+        case l if (l.isTypeOf[List[List[Int]]]) => 
           "match" 
         case _ => "no match"
       }).mustEqual("no match")
  
       // Positive test
       ({
-        val x = ReifiableList("foo", "bar")
+        val x = Reifiable(List("foo", "bar"))
         x match { 
           case s :: rest if (
-            ReifiableList.isListOf(x, manifest[String]) && s == "foo"
+            x.isTypeOf[List[String]] && s == "foo"
           ) => 
             "match" 
           case _ => "no match"
         }
       }).mustEqual("match")
-    }
 
-    "support extactors for matching Map types" in {
       // Positive test
-      (ReifiableMap("foo" -> "bar") match { 
-        case m if (ReifiableMap.isMapOf(m, manifest[(String,String)])) => 
+      (Reifiable(Map("foo" -> "bar")) match { 
+        case m if (m.isTypeOf[Map[String,String]]) => 
           "match" 
         case _ => "no match"
       }).mustEqual("match")
       // Negative test 
-      (ReifiableMap(1 -> 3) match { 
-        case m if (ReifiableMap.isMapOf(m, manifest[(String,String)])) => 
+      (Reifiable(Map(1 -> 3)) match { 
+        case m if (m.isTypeOf[Map[String,String]]) => 
           "match" 
         case _ => "no match"
       }).mustEqual("no match")
       
       // Positive test
-      (ReifiableMap("foo" -> 3) match { 
-        case m if (ReifiableMap.isMapOf(m, manifest[(String, Int)])) => 
+      (Reifiable(Map("foo" -> 3)) match { 
+        case m if (m.isTypeOf[Map[String, Int]]) => 
           "match" 
         case _ => "no match"
       }).mustEqual("match")
       // Negative test 
-      (ReifiableMap(1 -> 3) match { 
-        case m if (ReifiableMap.isMapOf(m, manifest[(String,Int)])) => 
+      (Reifiable(Map(1 -> 3)) match { 
+        case m if (m.isTypeOf[Map[String,Int]]) => 
           "match" 
         case _ => "no match"
       }).mustEqual("no match")
       
       // Positive test
-      (ReifiableMap("foo" -> ReifiableMap(1 -> 2)) match { 
+      (Reifiable(Map("foo" -> Map(1 -> 2))) match { 
         case m if (
-          ReifiableMap.isMapOf(m, manifest[(String, Map[Int,Int])])
+          m.isTypeOf[Map[String, Map[Int,Int]]]
         ) => 
           "match" 
         case _ => "no match"
       }).mustEqual("match")
       // Negative test 
-      (ReifiableMap("foo" -> ReifiableMap(1 -> 2)) match { 
+      (Reifiable(Map("foo" -> Map(1 -> 2))) match { 
         case m if (
-          ReifiableMap.isMapOf(m, manifest[(String, Map[String,Int])])
+          m.isTypeOf[Map[String, Map[String,Int]]]
         ) => 
           "match" 
         case _ => "no match"
@@ -147,7 +145,22 @@ object TypesSpec extends Specification {
         case _ => "no match"
       }).mustEqual("match")
  
+      ("5" match {
+        case Int(i) => "match"
+        case _ => "no match"
+      }).mustEqual("match")
+  
+      (("5": Any) match {
+        case Int(i) => "match"
+        case _ => "no match"
+      }).mustEqual("match")
+
       ((5 : Short) match { 
+        case Short(s) => "match" 
+        case _ => "no match"
+      }).mustEqual("match")
+ 
+      ("5" match { 
         case Short(s) => "match" 
         case _ => "no match"
       }).mustEqual("match")
@@ -156,8 +169,18 @@ object TypesSpec extends Specification {
         case Long(l) => "match" 
         case _ => "no match"
       }).mustEqual("match")
+ 
+      ("5" match { 
+        case Long(l) => "match" 
+        case _ => "no match"
+      }).mustEqual("match")
       
       (1.0f match { 
+        case Float(f) => "match" 
+        case _ => "no match"
+      }).mustEqual("match")
+
+      ("1.0" match { 
         case Float(f) => "match" 
         case _ => "no match"
       }).mustEqual("match")
@@ -172,7 +195,17 @@ object TypesSpec extends Specification {
         case _ => "no match"
       }).mustEqual("match")
  
+      ("true" match { 
+        case Boolean(b) => "match" 
+        case _ => "no match"
+      }).mustEqual("match")
+ 
       (false match { 
+        case Boolean(b) => "match" 
+        case _ => "no match"
+      }).mustEqual("match")
+ 
+      ("false" match { 
         case Boolean(b) => "match" 
         case _ => "no match"
       }).mustEqual("match")
@@ -182,14 +215,75 @@ object TypesSpec extends Specification {
         case _ => "no match"
       }).mustEqual("match")
  
+      ("c" match { 
+        case Char(c) => "match" 
+        case _ => "no match"
+      }).mustEqual("match")
+ 
       ((0 : Byte) match { 
         case Byte(b) => "match" 
         case _ => "no match"
       }).mustEqual("match")
 
-      // Negative test
+      // Multiple matches
+      ("32767" match { 
+        case Short(s) => "match short" 
+        case Int(i) => "match int" 
+        case Long(l) => "match long" 
+        case _ => "no match"
+      }).mustEqual("match short")
+ 
+      ("32768" match { 
+        case Short(s) => "match short" 
+        case Int(i) => "match int" 
+        case Long(l) => "match long" 
+        case _ => "no match"
+      }).mustEqual("match int")
+ 
+      ("2147483648" match { 
+        case Short(s) => "match short" 
+        case Int(i) => "match int" 
+        case Long(l) => "match long" 
+        case _ => "no match"
+      }).mustEqual("match long")
+ 
+      ("1.0" match { 
+        case Float(f) => "match float" 
+        case Double(d) => "match double" 
+        case _ => "no match"
+      }).mustEqual("match float")
+ 
+      ("x" match { 
+        case Char(c) => "match char" 
+        case String(s) => "match string" 
+        case _ => "no match"
+      }).mustEqual("match char")
+ 
+      ("xx" match { 
+        case Char(c) => "match char" 
+        case String(s) => "match string" 
+        case _ => "no match"
+      }).mustEqual("match string")
+ 
+      ("foo" match { 
+        case Short(s) => "match short" 
+        case Int(i) => "match int" 
+        case Long(l) => "match long" 
+        case Float(f) => "match float" 
+        case Double(d) => "match double" 
+        case Char(d) => "match double" 
+        case String(s) => "match string" 
+        case _ => "no match"
+      }).mustEqual("match string")
+ 
+      // Negative tests
       (("test" : Any) match { 
         case Int(s) => "match" 
+        case _ => "no match"
+      }).mustEqual("no match")
+
+      ("cc" match { 
+        case Char(c) => "match" 
         case _ => "no match"
       }).mustEqual("no match")
     }

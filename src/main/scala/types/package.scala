@@ -21,27 +21,24 @@ import collection.SortedMap
 import collection.SortedSet
 
 import scalafy.types.extractors.BasicExtractor
-import scalafy.csv.Csv
+import scalafy.csv._
 
 /** Contains basic object types.
   *
   * The following is a summary of features:
   * {{{
   * // Reifiable types
-  * val x = ReifiableList("foo", "bar")
-  * x match {
-  *   case listOfStr if (
-  *     ReifiableList.isListOf(listOfStr, manifest[String])
-  *   ) =>
-  *     println("Matched: " + listOfStr)
-  * }
+  * def createList(): List[_] = Reifiable(List[Int]())
   *
-  * val x = ReifiableMap("foo" -> "bar")
+  * val x = createList()             // x is type List[_] (unknown list type)
+  * x.isTypeOf[List[String]]         // false
+  * x.isTypeOf[List[Int]]            // true 
+  *  
+  * def createMap(): Map[_,_] = Reifiable(Map[String, Boolean]())
+  * val x: Any = createMap()      
   * x match {
-  *   case mapOfStrToStr if (
-  *     ReifiableMap.isMapOf(mapOfStrToStr, manifest[(String, String)])
-  *   ) =>
-  *     println("Matched: " + mapOfStrToStr)
+  *   case xm if (xm.isTypeOf[Map[String, Boolean]]) => println("match")
+  *   case _ => println("no match")
   * }
   *
   * // Map extractor
@@ -52,185 +49,84 @@ import scalafy.csv.Csv
   * }
   *
   * // Scalar extractors
+  * //   NOTE: If using multiple scala extractors at once make sure 
+  * //         they are applied in this order or some will overide others 
   * val x = "test"
   * x match {
-  *   case String(s) => println("matched: " + s)
-  *   case Int(i) => println("matched: " + i)
-  *   ...
+  *   case Short(s) => println("matched Short: " + s)
+  *   case Int(i) => println("matched Int: " + i)
+  *   case Long(l) => println("matched Long: " + l)
+  *   case Float(f) => println("matched Float: " + f)
+  *   case Double(d) => println("matched Double: " + d)
+  *   case Boolean(b) => println("matched Boolean: " + b)
+  *   case Char(c) => println("matched Char: " + c)
+  *   case String(s) => println("matched String: " + s)
+  *   case Byte(b) => println("matched Byte: " + b)
   * }
   * }}}
   */
 package object types {
 
   ///////////////////////////////////////////////////////////////////////////
-  // Aliases
-  ///////////////////////////////////////////////////////////////////////////
-
-  type RList = ReifiableList
-  type RMap = ReifiableMap
-
-
-  ///////////////////////////////////////////////////////////////////////////
   // Reifiable Types
   ///////////////////////////////////////////////////////////////////////////
 
-  /** Reifiable List
+  /** Reifiable
     *
-    * Wraps the creation of a List such that it keeps track of manifest
-    * information about what type of information that is contained in the
-    * List. This information can then used later during pattern matching.
-    *
-    * A list of elements can be created as follows:
-    * {{{
-    * // type of x is List[String]
-    * val x = ReifiableList("foo", "bar")
-    *
-    * // type of x is List[List[String]]
-    * val x = ReifiableList(ReifiableList("foo", "bar"))
-    *
-    * // type of x is List[List[Int]]
-    * val x = ReifiableList(ReifiableList(1, 2))
-    * }}}
-    *
-    * Elements can be extracted from the list as follows:
-    * {{{
-    * x match {
-    *   case s :: rest if (x.isListOf(manifest[String]) && s == "foo") =>
-    *     println("Matched: " + s + " " + rest)
-    * 
-    *   case listOfStr if (x.isListOf(manifest[String])) =>
-    *     println("Matched: " + listOfStr)
-    *   
-    *   case listOfListOfStr if (x.isListOf(manifest[List[String]])) =>
-    *     println("Matched: " + listOfListOfStr)
-    *
-    *   case listOfListOfInt if (x.isListOf(manifest[List[Int]])) =>
-    *     println("Matched: " + listOfListOfInt)
-    *
-    *   case _ =>
-    *     println("No match")
-    * }
-    * }}}
-    *
-    * @author Mike Dreves
-    */
-  object ReifiableList {
-    import collection.mutable.WeakHashMap
-
-    val manifests = new WeakHashMap[List[_], Manifest[_]]()
-
-    def apply[A : Manifest](xs: A*): List[A] = {
-      val list = xs.toList
-      manifests.put(list, manifest[A])
-      list
-    }
-
-    def unapplySeq[A](xs: List[A]): Option[Seq[A]] =
-      if (manifests.contains(xs)) Some(xs) else None
-
-    def isListOf(x: Any, m: Manifest[_]) = {
-      if (x.isInstanceOf[List[_]]) {
-        val xs = x.asInstanceOf[List[_]] 
-        manifests.contains(xs) && m == manifests(xs)
-      } else false
-    }
-  }
-
-  class ReifiableListHelper(val x: Any) {
-    def isListOf(m: Manifest[_]) = ReifiableList.isListOf(x, m)
-  }
-
-  /** Allows us to use x.isListOf(manifiest[...]) */
-  implicit def any2ReifiableListHelper(x: Any) = new ReifiableListHelper(x) 
-
-  /** Not used
-    *
-    * This class is only created so we can type alias the companion object
-    * [[scalafy.types.ReifiableList]]. Scala doesn't allow type aliases
-    * without a companion class for some reason.
-    */
-  class ReifiableList
-
-  /** Reifiable Map
-    *
-    * Wraps the creation of a Map such that it keeps track of manifest
-    * information about what type of information is contained in the Map.
+    * Stores information about the manifest associated with an object
     * This information can then used later during pattern matching.
+    * This is intended to be used in cases where a method returns an
+    * object that contains type information that would be lost due to 
+    * type erasure. Prior to returning the object Reifiable() can be
+    * called to store its manifest for later retrieval.
     *
-    * A reifiable map of elements can be created as follows:
+    * Example: 
     * {{{
-    * // type of x is Map[String, String]
-    * val x = ReifiableMap("foo" -> "bar")
+    * def createList(): List[_] = Reifiable(List[Int]())
     *
-    * // type of x is Map[Int, Map[String, String]]
-    * val x = ReifiableMap(1 -> ReifiableMap("foo" -> "bar"))
-    *
-    * // type of x is Map[Int, Map[Int, Int]]
-    * val x = ReifiableMap(1 -> ReifiableMap(2 -> 3))
-    * }}}
-    *
-    * Elements can be extracted from the map as follows:
-    * {{{
+    * val x = createList()             // x is type List[_] (unknown list type)
+    * x.isTypeOf[List[String]]         // false
+    * x.isTypeOf[List[Int]]            // true 
+    *  
+    * def createMap(): Map[_,_] = Reifiable(Map[String, Boolean]())
+    * val x = createMap()              // x is type Map[_,_]
     * x match {
-    *   case Map(a -> b, rest @ _*) if (
-    *     x.isMapOf(manifest[(String, String)]) && a == "foo"
-    *   ) =>
-    *     println("Matched: " + a + " " + b + " " + rest)
-    * 
-    *   case mapOfStrToStr if (
-    *     x.isMapOf(manifest[(String, String)])
-    *   ) =>
-    *     println("Matched: " + mapOfStrToStr)
-    *
-    *   case mapOfStrToMapOfStrToStr if (
-    *     x.isMapOf(manifest[(String, Map[String, String])])
-    *   ) =>
-    *     println("Matched: " + mapOfStrToMapOfStrToStr)
-    *
-    *   case _ =>
-    *     println("No match")
+    *   case xm if (xm.isTypeOf[Map[String, Boolean]]) => println("match")
+    *   case _ => println("no match")
     * }
     * }}}
     *
     * @author Mike Dreves
     */
-  object ReifiableMap {
+  object Reifiable {
     import collection.mutable.WeakHashMap
 
-    val manifests = new WeakHashMap[Map[_,_], Manifest[_]]()
+    val manifests = new WeakHashMap[Any, Manifest[_]]()
 
-    def apply[A: Manifest, B: Manifest](kvs: (A, B)*): Map[A, B] = {
-      val map = kvs.toMap
-      manifests.put(map, manifest[(A, B)])
-      map
+    def apply[A : Manifest](x: A): A = {
+      manifests.put(x, manifest[A])
+      x 
     }
 
-    def unapplySeq[A, B](xm: Map[A, B]): Option[Seq[(A, B)]] =
-      if (manifests.contains(xm)) Some(xm.toSeq) else None
- 
-    def isMapOf(x: Any, m: Manifest[_]) = {
-      if (x.isInstanceOf[Map[_,_]]) {
-        val xm = x.asInstanceOf[Map[_,_]] 
-        manifests.contains(xm) && m == manifests(xm)
-      } else false
+    /** For cases when have a manifest already */
+    def apply[A](m: Manifest[_], x: A): A = {
+      manifests.put(x, m)
+      x 
     }
+
+    def isTypeOf(x: Any, m: Manifest[_]) = 
+      manifests.contains(x) && m == manifests(x)
   }
 
-  class ReifiableMapHelper(val x: Any) {
-    def isMapOf(m: Manifest[_]) = ReifiableMap.isMapOf(x, m)
+  /** Settings for use with implicit params */
+  case class ReifiableSettings(enabled: Boolean)
+
+  class ReifiablePimp(val x: Any) {
+    def isTypeOf[A : Manifest] = Reifiable.isTypeOf(x, manifest[A])
   }
 
-  /** Allows us to use x.isMapOf(manifiest[...]) */
-  implicit def any2ReifiableMapHelper(x: Any) = new ReifiableMapHelper(x) 
-
-
-  /** Not used
-    *
-    * This class is only created so we can type alias the companion object
-    * [[scalafy.types.ReifiableMap]]. Scala doesn't allow type aliases
-    * without a companion class for some reason.
-    */
-  class ReifiableMap
+  /** Allows us to use x.isTypeOf[...] */
+  implicit def any2ReifiablePimp(x: Any) = new ReifiablePimp(x) 
 
 
   ///////////////////////////////////////////////////////////////////////////
@@ -299,11 +195,15 @@ package object types {
     */
   object String extends BasicExtractor {
     type A = String
+
+    def isType(x: Any) = x.isInstanceOf[String] 
+    def toType(s: String) = Some(s)
   }
 
   /** Int
     *
     * {{{
+    * // x can be of type Int or String
     * x match {
     *   case Int(i) => println("matched: " + i)
     *   case _ => println("no match")
@@ -314,11 +214,15 @@ package object types {
     */
   object Int extends BasicExtractor {
     type A = Int
+
+    def isType(x: Any) = x.isInstanceOf[Int] 
+    def toType(s: String) = Some(s.toInt)
   }
 
   /** Short
     *
     * {{{
+    * // x can be of type Short or String
     * x match {
     *   case Short(s) => println("matched: " + s)
     *   case _ => println("no match")
@@ -329,11 +233,15 @@ package object types {
     */
   object Short extends BasicExtractor {
     type A = Short
+
+    def isType(x: Any) = x.isInstanceOf[Short] 
+    def toType(s: String) = Some(s.toShort)
   }
 
   /** Long
     *
     * {{{
+    * // x can be of type Long or String
     * x match {
     *   case Long(l) => println("matched: " + l)
     *   case _ => println("no match")
@@ -344,11 +252,15 @@ package object types {
     */
   object Long extends BasicExtractor {
     type A = Long
+
+    def isType(x: Any) = x.isInstanceOf[Long] 
+    def toType(s: String) = Some(s.toLong)
   }
 
   /** Float
     *
     * {{{
+    * // x can be of type Float or String
     * x match {
     *   case Float(f) => println("matched: " + f)
     *   case _ => println("no match")
@@ -359,11 +271,15 @@ package object types {
     */
   object Float extends BasicExtractor {
     type A = Float
+
+    def isType(x: Any) = x.isInstanceOf[Float] 
+    def toType(s: String) = Some(s.toFloat)
   }
 
   /** Double
     *
     * {{{
+    * // x can be of type Double or String
     * x match {
     *   case Double(d) => println("matched: " + d)
     *   case _ => println("no match")
@@ -374,11 +290,15 @@ package object types {
     */
   object Double extends BasicExtractor {
     type A = Double
+
+    def isType(x: Any) = x.isInstanceOf[Double] 
+    def toType(s: String) = Some(s.toDouble)
   }
 
   /** Boolean
     *
     * {{{
+    * // x can be of type Boolean or String
     * x match {
     *   case Boolean(b) => println("matched: " + b)
     *   case _ => println("no match")
@@ -389,11 +309,15 @@ package object types {
     */
   object Boolean extends BasicExtractor {
     type A = Boolean
+
+    def isType(x: Any) = x.isInstanceOf[Boolean] 
+    def toType(s: String) = Some(s.toBoolean)
   }
 
   /** Char
     *
     * {{{
+    * // x can be of type Char or String of length 1
     * x match {
     *   case Char(c) => println("matched: " + c)
     *   case _ => println("no match")
@@ -404,6 +328,10 @@ package object types {
     */
   object Char extends BasicExtractor {
     type A = Char
+
+    def isType(x: Any) = x.isInstanceOf[Char] 
+    def toType(s: String) =
+      if (s.length == 1) Some(s(0)) else None
   }
 
   /** Byte
@@ -419,6 +347,9 @@ package object types {
     */
   object Byte extends BasicExtractor {
     type A = Byte
+    
+    def isType(x: Any) = x.isInstanceOf[Byte] 
+    def toType(s: String) = None
   }
 
 
@@ -446,9 +377,8 @@ package object types {
       */
     def toMap(value: Iterable[Char]): SortedMap[String, String] = {
       if (value == null) return SortedMap[String, String]()
-      val lines = Csv.fromNsv(value)
       var propMap = SortedMap[String, String]()
-      for (line <- lines) {
+      fromNsv[Seq[String]](value).getOrElse(Seq()).foreach { line =>
         var name: String = null
         var value: String = null
         val pos = line.indexOf(":")
@@ -583,9 +513,9 @@ package object types {
         if (value == null) {
           resultMap += (prop -> SortedSet[String]())
         } else {
-          val set = Csv.fromCsvLine(value) match {
-            case Left(l) => SortedSet(l)
-            case Right(r) => SortedSet(r : _*)
+          val set = fromCsv[Seq[String]](value) match {
+            case Some(seq) => SortedSet(seq : _*)
+            case _ => SortedSet[String]()
           }
           resultMap += (prop -> set)
         }
@@ -597,9 +527,9 @@ package object types {
         val bSet = if (value == null) 
           Set[String]() 
         else { 
-          Csv.fromCsvLine(value) match {
-            case Left(l) => Set(l)
-            case Right(r) => Set(r : _*)
+          fromCsv[Seq[String]](value) match {
+            case Some(seq) => Set(seq : _*)
+            case _ => Set[String]() 
           }
        }
 
@@ -670,13 +600,13 @@ package object types {
 
     /** merges two CSV strings into one */
     private def mergeValues(valueA: String, valueB: String): String = {
-      var setA = Csv.fromCsvLine(valueA) match {
-        case Left(l) => SortedSet(l)
-        case Right(r) => SortedSet(r : _*)
+      var setA = fromCsv[Seq[String]](valueA) match {
+        case Some(seq) => SortedSet(seq : _*)
+        case _ => SortedSet[String]()
       }
-      val setB = Csv.fromCsvLine(valueB) match {
-        case Left(l) => SortedSet(l)
-        case Right(r) => SortedSet(r : _*)
+      val setB = fromCsv[Seq[String]](valueB) match {
+        case Some(seq) => SortedSet(seq : _*)
+        case _ => SortedSet[String]()
       }
       val result = new StringBuilder()
       for (x <- setA.union(setB)) {

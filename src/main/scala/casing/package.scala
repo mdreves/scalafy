@@ -24,9 +24,10 @@ package scalafy
   * // Implicit conversions
   * "my_string".toLowerCamelCase   // myString
   * "my_string".toUpperCamelCase   // MyString
-  * "my_string".toDashSeparated    // My-String
-  * "My-String".toLowerUnderscore  // my_string
-  * "my_string".toUpperUnderscore  // MY_STRING
+  * "My-String".toLowerSnakeCase   // my_string
+  * "my_string".toUpperSnakeCase   // MY_STRING
+  * "my_string".toLowerDashCase    // my-string
+  * "my_string".toUpperDashCase    // My-String
   *
   * // List("strFoo", "strBar")
   * List("str_foo", "str_bar").toLowerCamelCase
@@ -40,9 +41,10 @@ package scalafy
   *   case UpperCase(x) => println("UPPERCASE: " + x)
   *   case LowerCamelCase(x) => println("lowerCamelCase: " + x)
   *   case UpperCamelCase(x) => println("UperCamelCase: " + x)
-  *   case LowerUnderscore(x) => println("lower_underscore: " + x)
-  *   case UpperUnderscore(x) => println("UPPER_UNDERSCORE: " + x)
-  *   case DashSeparated(x) => println("Dash-Separated: " + x)
+  *   case LowerSnakeCase(x) => println("lower_snake_case: " + x)
+  *   case UpperSnakeCase(x) => println("UPPER_SNAKE_CASE: " + x)
+  *   case LowerDashCase(x) => println("lower-dash-case: " + x)
+  *   case UpperDashCase(x) => println("Upper-Dash-Case: " + x)
   *   case _ => println("no match")
   * }
   * }}}
@@ -56,9 +58,10 @@ package object casing {
   final class IterableCaseConverter(val iter: Iterable[Char]) {
     def toLowerCamelCase() = Casing.toLowerCamelCase(iter)
     def toUpperCamelCase() = Casing.toUpperCamelCase(iter)
-    def toLowerUnderscore() = Casing.toLowerUnderscore(iter)
-    def toUpperUnderscore() = Casing.toUpperUnderscore(iter)
-    def toDashSeparated() = Casing.toDashSeparated(iter)
+    def toLowerSnakeCase() = Casing.toLowerSnakeCase(iter)
+    def toUpperSnakeCase() = Casing.toUpperSnakeCase(iter)
+    def toLowerDashCase() = Casing.toLowerDashCase(iter)
+    def toUpperDashCase() = Casing.toUpperDashCase(iter)
   }
 
   implicit def string2CaseConverter(s: String) = new IterableCaseConverter(s)
@@ -70,9 +73,10 @@ package object casing {
     def toUpperCase() = Casing.toCaseOnSeq(xs, UpperCase)
     def toLowerCamelCase() = Casing.toCaseOnSeq(xs, LowerCamelCase)
     def toUpperCamelCase() = Casing.toCaseOnSeq(xs, UpperCamelCase)
-    def toLowerUnderscore() = Casing.toCaseOnSeq(xs, LowerUnderscore)
-    def toUpperUnderscore() = Casing.toCaseOnSeq(xs, UpperUnderscore)
-    def toDashSeparated() = Casing.toCaseOnSeq(xs, DashSeparated)
+    def toLowerSnakeCase() = Casing.toCaseOnSeq(xs, LowerSnakeCase)
+    def toUpperSnakeCase() = Casing.toCaseOnSeq(xs, UpperSnakeCase)
+    def toLowerDashCase() = Casing.toCaseOnSeq(xs, LowerDashCase)
+    def toUpperDashCase() = Casing.toCaseOnSeq(xs, UpperDashCase)
   }
 
   implicit def seq2CaseConverter(xs: Seq[String]) =
@@ -83,9 +87,10 @@ package object casing {
     def toUpperCase() = Casing.toCaseOnMap(xm, UpperCase)
     def toLowerCamelCase() = Casing.toCaseOnMap(xm, LowerCamelCase)
     def toUpperCamelCase() = Casing.toCaseOnMap(xm, UpperCamelCase)
-    def toLowerUnderscore() = Casing.toCaseOnMap(xm, LowerUnderscore)
-    def toUpperUnderscore() = Casing.toCaseOnMap(xm, UpperUnderscore)
-    def toDashSeparated() = Casing.toCaseOnMap(xm, DashSeparated)
+    def toLowerSnakeCase() = Casing.toCaseOnMap(xm, LowerSnakeCase)
+    def toUpperSnakeCase() = Casing.toCaseOnMap(xm, UpperSnakeCase)
+    def toLowerDashCase() = Casing.toCaseOnMap(xm, LowerDashCase)
+    def toUpperDashCase() = Casing.toCaseOnMap(xm, UpperDashCase)
   }
 
   implicit def map2CaseConverter(xm: Map[String, _]) =
@@ -136,25 +141,43 @@ package object casing {
     override def toString() = "UpperCamelCase"
   }
 
-  case object LowerUnderscore extends Casing {
+  case object LowerSnakeCase extends Casing {
     def unapply(s: String): Option[String] = {
       if (s.length == 0) Some(s)
       else if (s.forall { c => c == '_' || c.isLower }) Some(s) else None
     }
 
-    override def toString() = "lower_underscore"
+    override def toString() = "lower_snake_case"
   }
 
-  case object UpperUnderscore extends Casing {
+  case object UpperSnakeCase extends Casing {
     def unapply(s: String): Option[String] = {
       if (s.length == 0) Some(s)
       else if (s.forall { c => c == '_' || c.isUpper }) Some(s) else None
     }
 
-    override def toString() = "UPPER_UNDERSCORE"
+    override def toString() = "UPPER_SNAKE_CASE"
   }
 
-  case object DashSeparated extends Casing {
+  case object LowerDashCase extends Casing {
+    def unapply(s: String): Option[String] = {
+      if (s.length == 0) Some(s)
+      else if (!s(0).isLower) None
+      else {
+        var prevIsDash = false
+        for (c <- s) {
+          if (c == '_') return None
+          if (prevIsDash && !c.isLower) return None
+          prevIsDash = (c == '-')
+        }
+        Some(s)
+      }
+    }
+
+    override def toString() = "lower-dash-case"
+  }
+
+  case object UpperDashCase extends Casing {
     def unapply(s: String): Option[String] = {
       if (s.length == 0) Some(s)
       else if (!s(0).isUpper) None
@@ -169,22 +192,26 @@ package object casing {
       }
     }
 
-    override def toString() = "Dash-Separated"
+    override def toString() = "Upper-Dash-Case"
+  }
+
+  case object IgnoreCasing extends Casing {
+    override def toString() = "IGNORE"
   }
 
   case object UnknownCasing extends Casing {
     override def toString() = "UNKOWN"
   }
 
-  object Casing extends CasingHelpers
+  object Casing extends CasingParser
 
 
   ///////////////////////////////////////////////////////////////////////////
   // Helpers
   ///////////////////////////////////////////////////////////////////////////
 
-  /** Casing helper methods */
-  trait CasingHelpers {
+  /** Casing parser */
+  trait CasingParser {
 
     private def iter2Str(iter: Iterable[Char]) =
       iter.iterator.foldLeft("")(_ + _)
@@ -203,7 +230,7 @@ package object casing {
       curCase: Casing = UnknownCasing,
       ignoreCasing: Seq[String] = List[String]()
     ): String = {
-      if (casing == curCase) return iter2Str(value)
+      if (casing == curCase || casing == IgnoreCasing) return iter2Str(value)
 
       if (!ignoreCasing.isEmpty) {
         val strValue = iter2Str(value)
@@ -214,9 +241,10 @@ package object casing {
       casing match {
         case UpperCase => value.foldLeft("")(_ + _.toUpper)
         case LowerCase => value.foldLeft("")(_ + _.toLower)
-        case LowerUnderscore => toLowerUnderscore(value)
-        case UpperUnderscore => toUpperUnderscore(value)
-        case DashSeparated => toDashSeparated(value)
+        case LowerSnakeCase => toLowerSnakeCase(value)
+        case UpperSnakeCase => toUpperSnakeCase(value)
+        case LowerDashCase => toLowerDashCase(value)
+        case UpperDashCase => toUpperDashCase(value)
         case UpperCamelCase => toUpperCamelCase(value)
         case _ => toLowerCamelCase(value)
       }
@@ -238,7 +266,7 @@ package object casing {
       ignoreCasing: Seq[String] = Nil,
       convertValues: Boolean = false
     ): Map[String, Any] = {
-      if (casing == curCase) return value
+      if (casing == curCase || casing == IgnoreCasing) return value
 
       for ((k, v) <- value) yield
         (toCase(k, casing, curCase, ignoreCasing) ->
@@ -263,7 +291,7 @@ package object casing {
       curCase: Casing = UnknownCasing,
       ignoreCasing: Seq[String] = Nil
     ): Seq[String] = {
-      if (casing == curCase) return value
+      if (casing == curCase || casing == IgnoreCasing) return value
 
       value.map(toCase(_, casing, curCase, ignoreCasing))
     }
@@ -337,12 +365,12 @@ package object casing {
       )
     }
 
-    /** Converts string to lower_underscore.
+    /** Converts string to lower_snake_case.
       *
       * @param value seq of chars
-      * @return a string in lower_underscore format
+      * @return a string in lower_snake_case format
       */
-    def toLowerUnderscore(value: Iterable[Char]): String = {
+    def toLowerSnakeCase(value: Iterable[Char]): String = {
       if (value == null) return null;
 
       val specialChars = List('=', '.', ',')
@@ -388,23 +416,31 @@ package object casing {
       newValue
     }
 
-    /** Converts string to UPPER_UNDERSCORE.
+    /** Converts string to UPPER_SNAKE_CASE.
       *
       * @param value seq of chars
-      * @return a string in UPPER_UNDERSCORE format
+      * @return a string in UPPER_SNAKE_CASE format
       */
-    def toUpperUnderscore(value: Iterable[Char]): String = {
+    def toUpperSnakeCase(value: Iterable[Char]): String = {
       if (value == null) return null;
 
-      toLowerUnderscore(value).toUpperCase
+      toLowerSnakeCase(value).toUpperCase
     }
 
-    /** Converts string to Dash-Separated.
+    /** Converts string to lower-dash-case.
       *
       * @param value seq of chars
-      * @return a string in Dash-Separated format
+      * @return a string in lower-dash-case format
       */
-    def toDashSeparated(value: Iterable[Char]): String = {
+    def toLowerDashCase(value: Iterable[Char]): String = {
+      toDashCase(value, false); 
+    }
+
+    def toUpperDashCase(value: Iterable[Char]): String = {
+      toDashCase(value, true); 
+    }
+
+    def toDashCase(value: Iterable[Char], toUpper: Boolean): String = {
       if (value == null) return null;
 
       val specialChars = List('=', '.', ',')
@@ -433,7 +469,7 @@ package object casing {
             lastUpper = c.isUpper
             if (newResult.length == 0 || newResult.last == '-' ||
                 specialChars.exists(_ == result.last)) {
-              newResult + c
+              newResult + (if (toUpper) c else c.toLower)
             } else {
               newResult + c.toLower
             }
@@ -444,7 +480,7 @@ package object casing {
             lastUpper = c.isUpper
             if (result.length == 0 || specialChars.exists(_ == result.last) ||
                 result.last == '-') {
-              newResult + c.toUpper
+              newResult + (if (toUpper) c.toUpper else c.toLower)
             } else {
               newResult + c.toLower
             }

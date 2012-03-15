@@ -28,9 +28,10 @@ object CasingSpec extends Specification {
     "support implicit casing conversions for strings" in {
       "my_string".toLowerCamelCase.mustEqual("myString")
       "my_string".toUpperCamelCase.mustEqual("MyString")
-      "my_string".toDashSeparated.mustEqual("My-String")
-      "My-String".toLowerUnderscore.mustEqual("my_string")
-      "my_string".toUpperUnderscore.mustEqual("MY_STRING")
+      "my_string".toLowerDashCase.mustEqual("my-string")
+      "my_string".toUpperDashCase.mustEqual("My-String")
+      "My-String".toLowerSnakeCase.mustEqual("my_string")
+      "my_string".toUpperSnakeCase.mustEqual("MY_STRING")
     }
 
     "support implicit casing conversions for seqs of strings" in {
@@ -52,11 +53,13 @@ object CasingSpec extends Specification {
         .mustEqual("someValue")
       ("SomeValue" match { case UpperCamelCase(x) => x; case _ => ""})
         .mustEqual("SomeValue")
-      ("some_value" match { case LowerUnderscore(x) => x; case _ => "" })
+      ("some_value" match { case LowerSnakeCase(x) => x; case _ => "" })
         .mustEqual("some_value")
-      ("SOME_VALUE" match { case UpperUnderscore(x) => x; case _ => "" })
+      ("SOME_VALUE" match { case UpperSnakeCase(x) => x; case _ => "" })
         .mustEqual("SOME_VALUE")
-      ("Some-Value" match { case DashSeparated(x) => x; case _ => "" })
+      ("some-value" match { case LowerDashCase(x) => x; case _ => "" })
+        .mustEqual("some-value")
+      ("Some-Value" match { case UpperDashCase(x) => x; case _ => "" })
         .mustEqual("Some-Value")
       ("FooBar" match { case LowerCamelCase(x) => x; case _ => "" })
         .mustNotEqual("someValue")
@@ -74,7 +77,7 @@ object CasingSpec extends Specification {
       Casing.toLowerCamelCase("MyLongerString").mustEqual("myLongerString")
     }
 
-    "convert lower_underscore to lowerCamelCase" in {
+    "convert lower_snake_case to lowerCamelCase" in {
       Casing.toLowerCamelCase("my_string").mustEqual("myString")
       Casing.toLowerCamelCase("my_longer_string").mustEqual("myLongerString")
     }
@@ -84,7 +87,7 @@ object CasingSpec extends Specification {
       Casing.toLowerCamelCase("MY_LONGER_STRING").mustEqual("myLongerString")
     }
 
-    "convert Dash-Separated to lowerCamelCase" in {
+    "convert Upper-Dash-Case to lowerCamelCase" in {
       Casing.toLowerCamelCase("My-String").mustEqual("myString")
       Casing.toLowerCamelCase("My-Longer-String").mustEqual("myLongerString")
     }
@@ -108,10 +111,10 @@ object CasingSpec extends Specification {
     "support being escapped with \" or '" in {
       Casing.toLowerCamelCase("\"myString=Test\"")
         .mustEqual("\"myString=Test\"")
-      Casing.toLowerCamelCase("\"lower_underscore\"")
-        .mustEqual("\"lower_underscore\"")
-      Casing.toLowerCamelCase("\"Dash-Separated\"")
-        .mustEqual("\"Dash-Separated\"")
+      Casing.toLowerCamelCase("\"lower_snake_case\"")
+        .mustEqual("\"lower_snake_case\"")
+      Casing.toLowerCamelCase("\"Upper-Dash-Case\"")
+        .mustEqual("\"Upper-Dash-Case\"")
       Casing.toLowerCamelCase("'UpperCamelCase'")
         .mustEqual("'UpperCamelCase'")
     }
@@ -128,7 +131,7 @@ object CasingSpec extends Specification {
       Casing.toUpperCamelCase("myLongerString").mustEqual("MyLongerString")
     }
 
-    "convert lower_underscore to UpperCamelCase" in {
+    "convert lower_snake_case to UpperCamelCase" in {
       Casing.toUpperCamelCase("my_string").mustEqual("MyString")
       Casing.toUpperCamelCase("my_longer_string").mustEqual("MyLongerString")
     }
@@ -138,7 +141,7 @@ object CasingSpec extends Specification {
       Casing.toUpperCamelCase("MY_LONGER_STRING").mustEqual("MyLongerString")
     }
 
-    "convert Dash-Separated to UpperCamelCase" in {
+    "convert Upper-Dash-Case to UpperCamelCase" in {
       Casing.toUpperCamelCase("My-String").mustEqual("MyString")
       Casing.toUpperCamelCase("My-Longer-String").mustEqual("MyLongerString")
     }
@@ -160,152 +163,208 @@ object CasingSpec extends Specification {
     }
   }
 
-  "The Casing.toLowerUnderscore function" should {
-    "not change lower_underscore strings" in {
-      Casing.toLowerUnderscore("my_string").mustEqual("my_string")
-      Casing.toLowerUnderscore("my_longer_string")
+  "The Casing.toLowerSnakeCase function" should {
+    "not change lower_snake_case strings" in {
+      Casing.toLowerSnakeCase("my_string").mustEqual("my_string")
+      Casing.toLowerSnakeCase("my_longer_string")
         .mustEqual("my_longer_string")
     }
 
-    "convert lowerCamelCase to lower_underscore" in {
-      Casing.toLowerUnderscore("myString").mustEqual("my_string")
-      Casing.toLowerUnderscore("myLongerString").mustEqual("my_longer_string")
+    "convert lowerCamelCase to lower_snake_case" in {
+      Casing.toLowerSnakeCase("myString").mustEqual("my_string")
+      Casing.toLowerSnakeCase("myLongerString").mustEqual("my_longer_string")
     }
 
-    "convert UpperCamelCase to lower_underscore" in {
-      Casing.toLowerUnderscore("MyString").mustEqual("my_string")
-      Casing.toLowerUnderscore("MyLonger-String")
+    "convert UpperCamelCase to lower_snake_case" in {
+      Casing.toLowerSnakeCase("MyString").mustEqual("my_string")
+      Casing.toLowerSnakeCase("MyLonger-String")
         .mustEqual("my_longer_string")
     }
 
-    "convert Dash-Separated to lower_underscore" in {
-      Casing.toLowerUnderscore("My-String").mustEqual("my_string")
-      Casing.toLowerUnderscore("My-Longer-String")
+    "convert Upper-Dash-Case to lower_snake_case" in {
+      Casing.toLowerSnakeCase("My-String").mustEqual("my_string")
+      Casing.toLowerSnakeCase("My-Longer-String")
         .mustEqual("my_longer_string")
     }
 
-    "convert UPPER_UNDERSCORE to lower_underscore" in {
-      Casing.toLowerUnderscore("MY_STRING").mustEqual("my_string")
-      Casing.toLowerUnderscore("MY_LONGER_STRING")
+    "convert UPPER_UNDERSCORE to lower_snake_case" in {
+      Casing.toLowerSnakeCase("MY_STRING").mustEqual("my_string")
+      Casing.toLowerSnakeCase("MY_LONGER_STRING")
         .mustEqual("my_longer_string")
     }
 
-    "convert UPPER to lower_underscore" in {
-      Casing.toLowerUnderscore("UPPER").mustEqual("upper")
+    "convert UPPER to lower_snake_case" in {
+      Casing.toLowerSnakeCase("UPPER").mustEqual("upper")
     }
 
-    "convert lower to lower_underscore" in {
-      Casing.toLowerUnderscore("lower").mustEqual("lower")
+    "convert lower to lower_snake_case" in {
+      Casing.toLowerSnakeCase("lower").mustEqual("lower")
     }
 
-    "separate numbers with underscore" in {
-      Casing.toLowerUnderscore("MyString2").mustEqual("my_string_2")
-      Casing.toLowerUnderscore("My13String2").mustEqual("my_13_string_2")
+    "separate numbers with snake_case" in {
+      Casing.toLowerSnakeCase("MyString2").mustEqual("my_string_2")
+      Casing.toLowerSnakeCase("My13String2").mustEqual("my_13_string_2")
     }
 
     "work with special chars (. , =)" in {
-      Casing.toLowerUnderscore("myString=Test").mustEqual("my_string=test")
-      Casing.toLowerUnderscore("myString.Test=Test2")
+      Casing.toLowerSnakeCase("myString=Test").mustEqual("my_string=test")
+      Casing.toLowerSnakeCase("myString.Test=Test2")
         .mustEqual("my_string.test=test_2")
-      Casing.toLowerUnderscore("test1Test,Test2,test3")
+      Casing.toLowerSnakeCase("test1Test,Test2,test3")
         .mustEqual("test_1_test,test_2,test_3")
     }
   }
 
-  "The Casing.toUpperUnderscore function" should {
+  "The Casing.toUpperSnakeCase function" should {
     "not change UPPER_UNDERSCORE strings" in {
-      Casing.toUpperUnderscore("MY_STRING").mustEqual("MY_STRING")
-      Casing.toUpperUnderscore("MY_LONGER_STRING")
+      Casing.toUpperSnakeCase("MY_STRING").mustEqual("MY_STRING")
+      Casing.toUpperSnakeCase("MY_LONGER_STRING")
         .mustEqual("MY_LONGER_STRING")
     }
 
     "convert lowerCamelCase to UPPER_UNDERSCORE" in {
-      Casing.toUpperUnderscore("myString").mustEqual("MY_STRING")
-      Casing.toUpperUnderscore("myLongerString")
+      Casing.toUpperSnakeCase("myString").mustEqual("MY_STRING")
+      Casing.toUpperSnakeCase("myLongerString")
         .mustEqual("MY_LONGER_STRING")
     }
 
     "convert UpperCamelCase to UPPER_UNDERSCORE" in {
-      Casing.toUpperUnderscore("MyString").mustEqual("MY_STRING")
-      Casing.toUpperUnderscore("MyLongerString")
+      Casing.toUpperSnakeCase("MyString").mustEqual("MY_STRING")
+      Casing.toUpperSnakeCase("MyLongerString")
         .mustEqual("MY_LONGER_STRING")
     }
 
-    "convert Dash-Separated to UPPER_UNDERSCORE" in {
-      Casing.toUpperUnderscore("My-String").mustEqual("MY_STRING")
-      Casing.toUpperUnderscore("My-Longer-String")
+    "convert Upper-Dash-Case to UPPER_UNDERSCORE" in {
+      Casing.toUpperSnakeCase("My-String").mustEqual("MY_STRING")
+      Casing.toUpperSnakeCase("My-Longer-String")
         .mustEqual("MY_LONGER_STRING")
     }
 
-    "convert lower_underscore to UPPER_UNDERSCORE" in {
-      Casing.toUpperUnderscore("my_string").mustEqual("MY_STRING")
-      Casing.toUpperUnderscore("my_longer_string")
+    "convert lower_snake_case to UPPER_UNDERSCORE" in {
+      Casing.toUpperSnakeCase("my_string").mustEqual("MY_STRING")
+      Casing.toUpperSnakeCase("my_longer_string")
         .mustEqual("MY_LONGER_STRING")
     }
 
     "convert UPPER to UPPER_UNDERSCORE" in {
-      Casing.toUpperUnderscore("UPPER").mustEqual("UPPER")
+      Casing.toUpperSnakeCase("UPPER").mustEqual("UPPER")
     }
 
     "convert lower to UPPER_UNDERSCORE" in {
-      Casing.toUpperUnderscore("lower").mustEqual("LOWER")
+      Casing.toUpperSnakeCase("lower").mustEqual("LOWER")
     }
 
-    "separate numbers with underscore" in {
-      Casing.toUpperUnderscore("MyString2").mustEqual("MY_STRING_2")
-      Casing.toUpperUnderscore("My13String2").mustEqual("MY_13_STRING_2")
+    "separate numbers with snake_case" in {
+      Casing.toUpperSnakeCase("MyString2").mustEqual("MY_STRING_2")
+      Casing.toUpperSnakeCase("My13String2").mustEqual("MY_13_STRING_2")
     }
 
     "work with special chars (. , =)" in {
-      Casing.toUpperUnderscore("myString=Test").mustEqual("MY_STRING=TEST")
-      Casing.toUpperUnderscore("myString.Test=Test2")
+      Casing.toUpperSnakeCase("myString=Test").mustEqual("MY_STRING=TEST")
+      Casing.toUpperSnakeCase("myString.Test=Test2")
         .mustEqual("MY_STRING.TEST=TEST_2")
-      Casing.toUpperUnderscore("test1Test,Test2,test3")
+      Casing.toUpperSnakeCase("test1Test,Test2,test3")
         .mustEqual("TEST_1_TEST,TEST_2,TEST_3")
     }
   }
 
-  "The Casing.toDashSeparated function" should {
-    "not change Dash-Separated strings" in {
-      Casing.toDashSeparated("My-String").mustEqual("My-String")
-      Casing.toDashSeparated("My-Longer-String")
-        .mustEqual("My-Longer-String")
+  "The Casing.toLowerDashCase function" should {
+    "not change lower-dash-case strings" in {
+      Casing.toLowerDashCase("my-string").mustEqual("my-string")
+      Casing.toLowerDashCase("my-longer-string")
+        .mustEqual("my-longer-string")
     }
 
-    "convert lowerCamelCase to Dash-Separated" in {
-      Casing.toDashSeparated("myString").mustEqual("My-String")
-      Casing.toDashSeparated("myLongerString").mustEqual("My-Longer-String")
+    "convert Upper-Dash-Case to lower-dash-case" in {
+      Casing.toLowerDashCase("My-String").mustEqual("my-string")
+      Casing.toLowerDashCase("My-Longer-String")
+        .mustEqual("my-longer-string")
     }
 
-    "convert UpperCamelCase to Dash-Separated" in {
-      Casing.toDashSeparated("MyString").mustEqual("My-String")
-      Casing.toDashSeparated("MyLonger-String").mustEqual("My-Longer-String")
+    "convert lowerCamelCase to lower-dash-case" in {
+      Casing.toLowerDashCase("myString").mustEqual("my-string")
+      Casing.toLowerDashCase("myLongerString").mustEqual("my-longer-string")
     }
 
-    "convert underscore_separated to Dash-Separated" in {
-      Casing.toDashSeparated("my_string").mustEqual("My-String")
-      Casing.toDashSeparated("my_longer_string")
-        .mustEqual("My-Longer-String")
+    "convert UpperCamelCase to lower-dash-case" in {
+      Casing.toLowerDashCase("MyString").mustEqual("my-string")
+      Casing.toLowerDashCase("MyLonger-String").mustEqual("my-longer-string")
     }
 
-    "convert UPPER to Dash-Separated" in {
-      Casing.toDashSeparated("UPPER").mustEqual("Upper")
+    "convert snake_case_separated to lower-dash-case" in {
+      Casing.toLowerDashCase("my_string").mustEqual("my-string")
+      Casing.toLowerDashCase("my_longer_string")
+        .mustEqual("my-longer-string")
     }
 
-    "convert lower to Dash-Separated" in {
-      Casing.toDashSeparated("lower").mustEqual("Lower")
+    "convert UPPER to lower-dash-case" in {
+      Casing.toLowerDashCase("UPPER").mustEqual("upper")
     }
 
-    "separate numbers with underscore" in {
-      Casing.toDashSeparated("MyString2").mustEqual("My-String-2")
-      Casing.toDashSeparated("My13String2").mustEqual("My-13-String-2")
+    "convert lower to lower-dash-case" in {
+      Casing.toLowerDashCase("lower").mustEqual("lower")
+    }
+
+    "separate numbers with snake_case" in {
+      Casing.toLowerDashCase("MyString2").mustEqual("my-string-2")
+      Casing.toLowerDashCase("My13String2").mustEqual("my-13-string-2")
     }
 
     "work with special chars (. , =)" in {
-      Casing.toDashSeparated("myString=Test").mustEqual("My-String=Test")
-      Casing.toDashSeparated("myString.Test=Test2")
+      Casing.toLowerDashCase("myString=test").mustEqual("my-string=test")
+      Casing.toLowerDashCase("myString.test=Test2")
+        .mustEqual("my-string.test=test-2")
+      Casing.toLowerDashCase("test1Test,Test2,test3")
+        .mustEqual("test-1-test,test-2,test-3")
+    }
+  }
+
+  "The Casing.toUpperDashCase function" should {
+    "not change Upper-Dash-Case strings" in {
+      Casing.toUpperDashCase("My-String").mustEqual("My-String")
+      Casing.toUpperDashCase("My-Longer-String")
+        .mustEqual("My-Longer-String")
+    }
+
+    "convert lower-dash-case to Upper-Dash-Case" in {
+      Casing.toUpperDashCase("my-string").mustEqual("My-String")
+      Casing.toUpperDashCase("my-longer-string").mustEqual("My-Longer-String")
+    }
+
+    "convert lowerCamelCase to Upper-Dash-Case" in {
+      Casing.toUpperDashCase("myString").mustEqual("My-String")
+      Casing.toUpperDashCase("myLongerString").mustEqual("My-Longer-String")
+    }
+
+    "convert UpperCamelCase to Upper-Dash-Case" in {
+      Casing.toUpperDashCase("MyString").mustEqual("My-String")
+      Casing.toUpperDashCase("MyLonger-String").mustEqual("My-Longer-String")
+    }
+
+    "convert snake_case_separated to Upper-Dash-Case" in {
+      Casing.toUpperDashCase("my_string").mustEqual("My-String")
+      Casing.toUpperDashCase("my_longer_string")
+        .mustEqual("My-Longer-String")
+    }
+
+    "convert UPPER to Upper-Dash-Case" in {
+      Casing.toUpperDashCase("UPPER").mustEqual("Upper")
+    }
+
+    "convert lower to Upper-Dash-Case" in {
+      Casing.toUpperDashCase("lower").mustEqual("Lower")
+    }
+
+    "separate numbers with snake_case" in {
+      Casing.toUpperDashCase("MyString2").mustEqual("My-String-2")
+      Casing.toUpperDashCase("My13String2").mustEqual("My-13-String-2")
+    }
+
+    "work with special chars (. , =)" in {
+      Casing.toUpperDashCase("myString=Test").mustEqual("My-String=Test")
+      Casing.toUpperDashCase("myString.Test=Test2")
         .mustEqual("My-String.Test=Test-2")
-      Casing.toDashSeparated("test1Test,Test2,test3")
+      Casing.toUpperDashCase("test1Test,Test2,test3")
         .mustEqual("Test-1-Test,Test-2,Test-3")
     }
   }
@@ -315,9 +374,10 @@ object CasingSpec extends Specification {
       Casing.toCase("My-String", LowerCamelCase, UnknownCasing)
         .mustEqual("myString")
       Casing.toCase("My-String", UpperCamelCase).mustEqual("MyString")
-      Casing.toCase("myString", DashSeparated).mustEqual("My-String")
-      Casing.toCase("myString", LowerUnderscore).mustEqual("my_string")
-      Casing.toCase("myString", UpperUnderscore).mustEqual("MY_STRING")
+      Casing.toCase("myString", LowerDashCase).mustEqual("my-string")
+      Casing.toCase("myString", UpperDashCase).mustEqual("My-String")
+      Casing.toCase("myString", LowerSnakeCase).mustEqual("my_string")
+      Casing.toCase("myString", UpperSnakeCase).mustEqual("MY_STRING")
       Casing.toCase("test", UpperCase).mustEqual("TEST")
       Casing.toCase("Test", LowerCase).mustEqual("test")
     }
@@ -343,13 +403,13 @@ object CasingSpec extends Specification {
 
       Casing.toCaseOnMap(
           Map("My-String" -> "My-Value", "myString2" -> "myValue2"),
-          LowerUnderscore )
+          LowerSnakeCase )
         .mustEqual(
           Map("my_string" -> "My-Value", "my_string_2" -> "myValue2") )
 
       Casing.toCaseOnMap(
           Map("My-String" -> "My-Value", "myString2" -> "myValue2"),
-          UpperUnderscore )
+          UpperSnakeCase )
         .mustEqual(
           Map("MY_STRING" -> "My-Value", "MY_STRING_2" -> "myValue2") )
 
@@ -386,10 +446,10 @@ object CasingSpec extends Specification {
       Casing.toCaseOnSeq(List("My-String", "myString2"),UpperCamelCase)
         .mustEqual(List("MyString", "MyString2"))
 
-      Casing.toCaseOnSeq(List("My-String", "myString2"), LowerUnderscore)
+      Casing.toCaseOnSeq(List("My-String", "myString2"), LowerSnakeCase)
         .mustEqual(List("my_string", "my_string_2"))
 
-      Casing.toCaseOnSeq(List("My-String", "myString2"), UpperUnderscore)
+      Casing.toCaseOnSeq(List("My-String", "myString2"), UpperSnakeCase)
         .mustEqual(List("MY_STRING", "MY_STRING_2"))
 
       Casing.toCaseOnSeq(List("Test", "test2"), UpperCase)

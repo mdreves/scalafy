@@ -89,7 +89,23 @@ package object extractors {
   trait BasicExtractor {
     type A
 
-    def unapply(x: A): Option[A] = Some(x)
+    /** Checks if proper type (must do in concrete class due to type erasure) */
+    def isType(x: Any): Boolean
+
+    /** Conversion from string to type */
+    def toType(s: String): Option[A]
+
+    /** Extractor for type itself and types that can be converted from String */
+    def unapply(x: Any): Option[A] = 
+      if (isType(x)) return Some(x.asInstanceOf[A])
+      else if (x.isInstanceOf[String]) {
+        try {
+          return toType(x.asInstanceOf[String])
+        } catch {
+          case _ => return None
+        }
+      }
+      else None
   }
 
   /** List[A] extractor
