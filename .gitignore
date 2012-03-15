@@ -1,6 +1,7 @@
 # Temporary files
 syntax: glob
 *.class
+*.swp
 *~
 *.bak
 *.old
