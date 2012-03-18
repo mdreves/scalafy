@@ -115,7 +115,7 @@ package object types {
     }
 
     def isTypeOf(x: Any, m: Manifest[_]) = 
-      manifests.contains(x) && m == manifests(x)
+      manifests.contains(x) && m >:> manifests(x)
   }
 
   /** Settings for use with implicit params */
