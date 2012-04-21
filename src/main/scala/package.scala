@@ -16,14 +16,23 @@
   * @author Mike Dreves
   */
 
-/** Scalafy
-  *
+/** 
   * Scalafy offers a general set of utilities. Most of the documentation is
   * available in the individual packages. The following is a high level 
   * overview of features:
   *
-  *  <li>[[scalafy.util.json][JSON]] parsing</li>
-  *  <li>[[scalafy.util.xml][XML]] parsing</li>
+  *  <li>Support for [[scalafy.util.json]] parsing</li>
+  *  <li>Support for [[scalafy.util.xml]] parsing</li>
+  *  <li>Support for [[scalafy.util.csv]] parsing</li>
+  *  <li>Support for [[scalafy.util.casing]] conversion</li>
+  *  <li>Support for type [[scalafy.util.converters]]</li>
+  *  <li>Support for [[scalafy.types.record]] types</li>
+  *  <li>Support for [[scalafy.collection.uniform]] types</li>
+  *  <li>Support for [[scalafy.types.meta]] data</li>
+  *  <li>Support for [[scalafy.types.reifiable]] types</li>
+  *  <li>Enhancements to [[scalafy.types.basic]] types</li>
+  *  <li>Support for [[scalafy.types.extractors]] for list/map types</li>
+  *  <li>Misc [[scalafy.collection.immutable]] and [[scalafy.collection.mutable]] collections</li>
   */
 package object scalafy {
 

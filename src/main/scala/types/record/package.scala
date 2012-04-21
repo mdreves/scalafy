@@ -22,7 +22,7 @@ import scala.collection.generic.FilterMonadic
 import scalafy.util._
 import scalafy.util.converters._
 
-/** Contains support for record types.
+/** Support for record types.
   *
   * A record type is a trait that can be mixed in to any object to provide Map
   * like features. The trait itself is marker interface. All the features are

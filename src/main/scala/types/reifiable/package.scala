@@ -20,7 +20,7 @@ package scalafy.types
 import scalafy.types.meta.ObjectCache
 import scalafy.util._
 
-/** Reifiable types.
+/** Support for reifiable types.
   *
   * The following is a summary of features:
   * {{{
@@ -45,7 +45,7 @@ import scalafy.util._
 package object reifiable {
 
   ///////////////////////////////////////////////////////////////////////////
-  // vals and implicits 
+  // Settings 
   ///////////////////////////////////////////////////////////////////////////
 
   /** Settings for enabling/disabling reifiable types */

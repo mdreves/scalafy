@@ -19,7 +19,7 @@ package scalafy.util
 
 import scalafy.types.reifiable.ReifiableSettings
 
-/** Contains utilities for CSV matching and conversion.
+/** Utils for CSV matching and conversion.
   *
   * The following is a summary of features:
   * {{{
@@ -98,10 +98,15 @@ import scalafy.types.reifiable.ReifiableSettings
 package object csv {
 
   ///////////////////////////////////////////////////////////////////////////
-  // vals and implicits 
+  // Constants 
   ///////////////////////////////////////////////////////////////////////////
 
   val Eol = "\n"
+
+
+  ///////////////////////////////////////////////////////////////////////////
+  // Settings 
+  ///////////////////////////////////////////////////////////////////////////
 
   case class CsvSettings(reifiableSettings: ReifiableSettings)
 

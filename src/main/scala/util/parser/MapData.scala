@@ -55,9 +55,9 @@ private[parser] class MapData[A, B](
     }
   }
 
-  override protected def createManifestUsing[A : Manifest]: Manifest[_] = {
+  override protected def createManifestUsing[T : Manifest]: Manifest[_] = {
     createMapManifest(objType.erasure)(
-        manifest[Symbol], manifest[A]) match {
+        manifest[Symbol], manifest[T]) match {
       case Right(m) => m
       case Left(l) => throw new Error(l)
     }

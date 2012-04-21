@@ -17,6 +17,9 @@
   */
 package scalafy.collection
 
+import java.util.Date
+import java.util.TimeZone
+
 import scalafy.types.meta.OpaqueDataSettings
 import scalafy.util._
 import scalafy.util.converters.ConversionSettings
@@ -25,7 +28,8 @@ import scalafy.util.converters.ConversionSettings
   *
   * Uniform data types are data types that only work with primitive types
   * or Lists/Maps of primitive types. Primitive types include String, Symbol,
-  * Int, Short, Long, Float, Double, Boolean, Char, and Byte.
+  * Int, Short, Long, Float, Double, Boolean, Char, Byte, BigInt, BigDecimal,
+  * Date, and TimeZone.
   *
   * Uniform types vs Records vs Converters:
   * <li> Uniform types should be used when working with multiple 
@@ -131,7 +135,7 @@ import scalafy.util.converters.ConversionSettings
 package object uniform {
 
   ///////////////////////////////////////////////////////////////////////////
-  // vals and implicits 
+  // Settings 
   ///////////////////////////////////////////////////////////////////////////
 
   case class UniformDataSettings(conversionSettings: ConversionSettings)
@@ -330,7 +334,8 @@ package object uniform {
   /** Primitive
     *
     * One of: 
-    *   String, Short, Int, Long, Float, Double, Boolean, Char, Byte, Symbol
+    *   String, Short, Int, Long, Float, Double, Boolean, Char, Byte, Symbol,
+    *   BigInt, BigDecimal, Date, TimeZone
     *
     * Note, these are only defined for the sake of completeness. These would
     * only be used if the top level object itself is a primitive (rare). The
@@ -360,6 +365,11 @@ package object uniform {
   case class UniformBoolean(value: Boolean) extends UniformPrimitive[Boolean]
   case class UniformChar(value: Char) extends UniformPrimitive[Char]
   case class UniformByte(value: Byte) extends UniformPrimitive[Byte]
+  case class UniformBigInt(value: BigInt) extends UniformPrimitive[BigInt]
+  case class UniformBigDecimal(value: BigDecimal) 
+    extends UniformPrimitive[BigDecimal]
+  case class UniformDate(value: Date) extends UniformPrimitive[Date]
+  case class UniformTimeZone(value: TimeZone) extends UniformPrimitive[TimeZone]
 
   /** Uniform List 
     *
@@ -1000,6 +1010,10 @@ package object uniform {
   implicit object UniformBooleanType extends UniformType[Boolean]
   implicit object UniformCharType extends UniformType[Char]
   implicit object UniformByteType extends UniformType[Byte]
+  implicit object UniformBigIntType extends UniformType[BigInt]
+  implicit object UniformBigDecimalType extends UniformType[BigDecimal]
+  implicit object UniformDateType extends UniformType[Date]
+  implicit object UniformTimeZoneType extends UniformType[TimeZone]
   implicit def toUniformListType[A : UniformType] = 
     new UniformType[UniformList[A]] {}
   // Special support for UniformList[Any] since no UniformType[Any] 
@@ -1043,6 +1057,15 @@ package object uniform {
     new CanConvertTo[Char, UniformChar] {}
   implicit def canConvertToByte: CanConvertTo[Byte, UniformByte] =
     new CanConvertTo[Byte, UniformByte] {}
+  implicit def canConvertToBigInt: CanConvertTo[BigInt, UniformBigInt] =
+    new CanConvertTo[BigInt, UniformBigInt] {}
+  implicit def canConvertToBigDecimal
+    : CanConvertTo[BigDecimal, UniformBigDecimal] =
+      new CanConvertTo[BigDecimal, UniformBigDecimal] {}
+  implicit def canConvertToDate: CanConvertTo[Date, UniformDate] =
+    new CanConvertTo[Date, UniformDate] {}
+  implicit def canConvertToTimeZone: CanConvertTo[TimeZone, UniformTimeZone] =
+    new CanConvertTo[TimeZone, UniformTimeZone] {}
 
 
   // Existential type so we can have same type for all existential types
@@ -1095,6 +1118,22 @@ package object uniform {
         m == manifest[UniformPrimitive[Byte]] ||
         m == manifest[UniformData[Byte]])
       manifest[Byte]
+    else if (m == manifest[UniformBigInt] ||
+        m == manifest[UniformPrimitive[BigInt]] ||
+        m == manifest[UniformData[BigInt]])
+      manifest[BigInt]
+    else if (m == manifest[UniformBigDecimal] ||
+        m == manifest[UniformPrimitive[BigDecimal]] ||
+        m == manifest[UniformData[BigDecimal]])
+      manifest[BigDecimal]
+    else if (m == manifest[UniformDate] ||
+        m == manifest[UniformPrimitive[Date]] ||
+        m == manifest[UniformData[Date]])
+      manifest[Date]
+    else if (m == manifest[UniformTimeZone] ||
+        m == manifest[UniformPrimitive[TimeZone]] ||
+        m == manifest[UniformData[TimeZone]])
+      manifest[TimeZone]
     else throw new Error("not a uniform primitive manifest")
   }
 
@@ -1109,6 +1148,10 @@ package object uniform {
     else if (clazz == classOf[Boolean]) true 
     else if (clazz == classOf[Char]) true 
     else if (clazz == classOf[Byte]) true 
+    else if (clazz == classOf[BigInt]) true 
+    else if (clazz == classOf[BigDecimal]) true 
+    else if (clazz == classOf[Date]) true 
+    else if (clazz == classOf[TimeZone]) true 
     else if (classOf[UniformPrimitive[_]].isAssignableFrom(clazz)) true 
     else false 
   }

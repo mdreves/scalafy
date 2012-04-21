@@ -17,13 +17,16 @@
   */
 package scalafy.util.json
 
+import java.io.Reader
+import java.io.StringWriter
+import java.io.Writer
+
 import scala.collection.immutable.WrappedString
+import scala.io.Source
 
 import scalafy.collection.mutable.ChunkedIterator
-import scalafy.collection.mutable.DefaultChunkedIterator
-import scalafy.collection.mutable.StringChunkedIterator
+import scalafy.collection.uniform._
 import scalafy.types.meta._
-import scalafy.types.uniform._
 import scalafy.util._
 import scalafy.util.casing._
 import scalafy.util.parser._
@@ -33,22 +36,40 @@ import scalafy.util.parser.TextParser._
 object JsonParser {
   private val errorPrefix = "JSON parse error :: "
 
-  /** Parser for fromJson package function
-    *
-    * @return either String error msg or data of given type
-    */
   def fromJson[A : Manifest](
-    json: Iterable[Char], settings: JsonSettings
+    reader: Reader, settings: JsonSettings
+  ): Either[String, A] = {
+    fromJson(ChunkedIterator(reader), settings)
+  }
+
+  def fromJson[A : Manifest](
+    source: Source, settings: JsonSettings
+  ): Either[String, A] = {
+    fromJson(ChunkedIterator(source), settings)
+  }
+
+  def fromJson[A : Manifest](
+    iterable: Iterable[Char], settings: JsonSettings
+  ): Either[String, A] = {
+    val chunkedIter = 
+      if (iterable.isInstanceOf[String])
+        ChunkedIterator(iterable.asInstanceOf[String])
+      else if (iterable.isInstanceOf[WrappedString]) 
+        ChunkedIterator(iterable.asInstanceOf[WrappedString].self)
+      else ChunkedIterator(iterable.iterator.buffered)
+    fromJson(chunkedIter, settings)
+  }
+
+  /** Returns either String error msg or data of given type */
+  def fromJson[A : Manifest](
+    chunkedIter: ChunkedIterator[String, Char], settings: JsonSettings
   ): Either[String, A] = {
 
-    val chunkedIter = 
-      if (json.isInstanceOf[String])
-        StringChunkedIterator(json.asInstanceOf[String], '\\')
-      else if (json.isInstanceOf[WrappedString]) 
-        StringChunkedIterator(json.asInstanceOf[WrappedString].self, '\\')
-      else DefaultChunkedIterator(json.iterator.buffered, '\\')
-
     val parserIter = createParserIterator(chunkedIter) 
+
+    // Check for valid empty input
+    if (!parserIter.hasNext && manifest[A].erasure == classOf[Option[_]])
+      return Right(None.asInstanceOf[A])
 
     TextParser.fromText(parserIter, settings) match {
       case Left(l) =>
@@ -57,26 +78,27 @@ object JsonParser {
     }
   }
 
-  /** fromJson returning Option */
-  def fromJsonOption[A : Manifest](
-    json: Iterable[Char], settings: JsonSettings
-  ): Option[A] = fromJson(json, settings) match {
-    case Right(r) => Some(r)
-    case Left(l) => None
-  }
-
-  /** Parser for toJson package function */
   def toJson(
     value: Any, 
     settings: JsonSettings 
   ): String = {
-    TextParser.toText(value, parserConverter, settings)  
+    val buf = new StringWriter
+    toJson(buf, value, settings)
+    buf.toString
+  }
+
+  def toJson(
+    writer: Writer,
+    value: Any, 
+    settings: JsonSettings 
+  ): Unit = {
+    TextParser.toText(writer, value, parserConverter, settings)  
   }
 
 
   // Helpers
 
-  protected[json] def createParserIterator[A : Manifest](
+  private[json] def createParserIterator[A : Manifest](
     iter: ChunkedIterator[String, Char]
   ): Iterator[ParseEvent] = new Iterator[ParseEvent] {
 
@@ -86,84 +108,103 @@ object JsonParser {
     val iterable = iter.toIterable
 
     var parsingString = false
-    var parsingArray = false 
+    var parsingArray = false
+    var addEmpty = false
 
-    def hasNext = iter.hasNextChunk
+    def hasNext = (addEmpty || iter.hasNextChunk)
 
-    def next(): ParseEvent = iter.head match {
+    def next(): ParseEvent = {
+      if (addEmpty) {
+        addEmpty = false
+        EmptyValue
 
-      // cleanup from string parsing
-      case c if (parsingString) =>
-        if (c != '"') 
-          return ParseError("invalid string: missing closing '\"'")
+      } else iter.head match {
 
-        iter.next()
-        iter.nextStop = 0
-        parsingString = false
-        Whitespace
-         
-      // end of obj
-      case '}' => 
-        iter.next()
-        ObjectEnd 
+        // cleanup from string parsing
+        case c if (parsingString) =>
+          if (c != '"') 
+            return ParseError("invalid string: missing closing '\"'")
 
-      // end of list
-      case ']' => 
-        iter.next()
-        parsingArray = false
-        ArrayEnd 
+          iter.next()
+          iter.nextStop = 0
+          parsingString = false
+          Whitespace
+           
+        // end of obj
+        case '}' => 
+          iter.next()
+          ObjectEnd 
 
-      case ':' => iter.next()
-        ObjectNameValueSeparator
-      
-      case ',' => 
-        iter.next()
-        if (parsingArray) ArrayItemSeparator
-        else ObjectNameValuePairSeparator
+        // end of list
+        case ']' => 
+          iter.next()
+          while (iter.hasNext && iter.head == ' ') iter.next() // eat WS
+          parsingArray = false
+          ArrayEnd 
 
-      // whitespace around structure characters or separators (ignore)
-      case c if (
-        c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ','
-      ) =>
-        iter.next()
-        Whitespace
+        case ':' => 
+          iter.next()
+          while (iter.hasNext && iter.head == ' ') iter.next() // eat WS
+          if (iter.hasNext && 
+              (iter.head == ',' || iter.head == '}' || iter.head == ']')) {
+            addEmpty = true
+          }
+          ObjectNameValueSeparator
+        
+        case ',' => 
+          iter.next()
+          if (iter.hasNext && 
+              (iter.head == ',' || iter.head == '}' || iter.head == ']')) { 
+            addEmpty = true
+          }
+          if (parsingArray) ArrayItemSeparator
+          else ObjectNameValuePairSeparator
 
-      // String value
-      case '"' =>
-        iter.next()
-        iter.nextStop = '"'
-        parsingString = true
-        StringValue(iterable)
+        // whitespace around structure characters or separators (ignore)
+        case c if (
+          c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == ','
+        ) =>
+          iter.next()
+          Whitespace
 
-      // Number value
-      case c if (c == '-' || c.isDigit) => NumberValue(iterable)
+        // String value
+        case '"' =>
+          iter.next()
+          iter.nextStop = '"'
+          parsingString = true
+          StringValue(iterable)
 
-      // Boolean value
-      case c if (c == 't' || c == 'f') => BooleanValue(iterable)
+        // Number value
+        case c if (c == '-' || c.isDigit) => NumberValue(iterable)
 
-      // null value
-      case 'n' => NullValue(iterable) 
+        // Boolean value
+        case c if (c == 't' || c == 'f') => BooleanValue(iterable)
 
-      // start of object
-      case '{' => 
-        iter.next()
-        ObjectStart
+        // null value
+        case 'n' => NullValue(iterable) 
 
-      // start of list
-      case '[' => 
-        iter.next()
-        parsingArray = true
-        ArrayStart
+        // start of object
+        case '{' => 
+          iter.next()
+          ObjectStart
 
-      case x => ParseError("unexpected character: " + x) 
+        // start of list
+        case '[' => 
+          iter.next()
+          parsingArray = true
+          ArrayStart
+
+        case x => ParseError("unexpected character: " + x) 
+      }
     }
   }
 
-  protected[json] def parserConverter(e: ParseEvent): String = e match {
+  private[json] def parserConverter(e: ParseEvent): String = e match {
     case StringValue(value) => "\"" + encodeStringData(value) + "\""
     case NumberValue(value) => value.toString
     case BooleanValue(value) => value.toString
     case NullValue(value) => value.toString
+    case EmptyValue => "null"
     case ArrayStart => "["
     case ArrayItemSeparator => ","
     case ArrayEnd => "]"
@@ -174,7 +215,7 @@ object JsonParser {
     case e => throw new Error("Unknown parse event: " + e) 
   }
 
-  protected[json] def encodeStringData(s: Iterable[Char]): String = {
+  private[json] def encodeStringData(s: Iterable[Char]): String = {
     val buf = new StringBuilder
     for (c <- s) {
       if (c == '\\') buf.append("\\\\")

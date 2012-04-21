@@ -17,20 +17,25 @@
   */
 package scalafy.util
 
+import java.text.DateFormat
+
 import scalafy.types.meta.OpaqueDataSettings
 import scalafy.types.reifiable.ReifiableSettings
 import scalafy.util.casing.Casing
 
-/** Contains utils for general parsing. */
+/** Utils for general parsing. */
 package object parser {
 
   ///////////////////////////////////////////////////////////////////////////
-  // vals and implicits 
+  // Settings 
   ///////////////////////////////////////////////////////////////////////////
 
   trait ParserSettings {
     val fieldCasing: Casing
     val prettyPrintSettings: PrettyPrintSettings
+    val dateFormatter: DateFormat
+    val typeHintSettings: TypeHintSettings
+    val classLoader: ClassLoader 
     val opaqueDataSettings: OpaqueDataSettings
     val reifiableSettings: ReifiableSettings
   }

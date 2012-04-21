@@ -19,9 +19,11 @@ Overview
 --------------------
 
 Scalafy is a library written in Scala that provides some additional utility
-classes and functions for things such as JSON parsing, CSV parsing, string
-casing conversion, etc. It also contains experimental code for handling type
-erasure using a set of reifiable types and special extractors.
+classes and functions for things such as JSON parsing, XML parsing, CSV
+parsing, string casing conversion, meta data, record types, uniform types,
+type converters, additional collection classes (WeakIdentityHashMap, etc). 
+It also contains experimental code for handling type erasure using a set of
+reifiable types and special extractors.
 
 The scalafy code depends only on the core Scala API and the core Java 2
 Standard Edition API. Scalafy is released under the EPL 1.0 open source

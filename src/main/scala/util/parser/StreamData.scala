@@ -37,8 +37,8 @@ private[parser] class StreamData[A](
     Right(obj)
   }
 
-  override protected def createManifestUsing[A : Manifest]: Manifest[_] = {
-    manifest[Stream[A]]
+  override protected def createManifestUsing[T : Manifest]: Manifest[_] = {
+    manifest[Stream[T]]
   }
 
   /** Recursive stream definition... */

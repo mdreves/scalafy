@@ -22,8 +22,7 @@ import scala.collection.SortedSet
 
 import scalafy.util.csv._ 
 
-/**
-  * Contains utilities for dealing with name/value pairs.
+/** Contains utilities for dealing with name/value pairs.
   *
   * Name/value pairs when stored as a string have each name/value pair 
   * stored on a separate line. The line starts with the property name

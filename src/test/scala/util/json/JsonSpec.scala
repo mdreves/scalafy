@@ -19,7 +19,6 @@ package test.scalafy.util.json
 
 import org.specs2.mutable.Specification
 
-import scalafy.collection.uniform._
 import scalafy.types.meta._
 import scalafy.types.reifiable._
 import scalafy.util._
@@ -161,6 +160,27 @@ object JsonSpec extends Specification {
       fromJson[Byte]("1234").mustEqual(None)
     }
 
+    "support extracting JSON as BigInt/BigDecimal" in {
+      fromJson[BigInt]("123331234123411233")
+        .mustEqual(Some(BigInt("123331234123411233")))
+      fromJson[BigDecimal]("123331234123411233")
+        .mustEqual(Some(BigDecimal("123331234123411233")))
+      fromJson[Map[String,BigInt]]("{\"foo\": 123331234123411233}")
+        .mustEqual(Some(Map("foo" -> BigInt("123331234123411233"))))
+    }
+
+    "support extracting JSON as Dates and Timezones" in {
+      val formatter = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+      fromJson[java.util.Date]("\"2012-01-01T20:01:01Z\"").mustEqual(
+        Some(formatter.parse("2012-01-01T20:01:01Z")))
+      fromJson[List[java.util.Date]](
+        "[\"2012-01-01T20:01:01Z\",\"2012-02-01T23:11:01Z\"]").mustEqual(
+        Some(List(formatter.parse("2012-01-01T20:01:01Z"),
+          formatter.parse("2012-02-01T23:11:01Z"))))
+      fromJson[java.util.TimeZone]("\"PST\"").mustEqual(
+        Some(java.util.TimeZone.getTimeZone("PST")))
+    }
+
     "support extracting JSON as null" in {
       fromJson[Any]("null").mustEqual(Some(null))
       fromJson[String]("null").mustEqual(Some(null))
@@ -171,6 +191,27 @@ object JsonSpec extends Specification {
       fromJson[Long]("null").mustEqual(None)
       fromJson[Double]("null").mustEqual(None)
       fromJson[Boolean]("null").mustEqual(None)
+    }
+
+    "support extracting JSON with Option types" in {
+      fromJson[Option[String]]("").mustEqual(Some(None))
+      fromJson[Option[String]]("\"foo\"").mustEqual(Some(Some("foo")))
+      fromJson[Option[Int]]("").mustEqual(Some(None))
+      fromJson[Option[Int]]("123").mustEqual(Some(Some(123)))
+      fromJson[Option[List[String]]]("").mustEqual(Some(None))
+      fromJson[Option[List[Int]]]("[1,2]").mustEqual(
+        Some(Some(List(1,2))))
+      fromJson[List[Option[Int]]]("[1,2,null]").mustEqual(
+        Some(List(Some(1),Some(2),None)))
+      fromJson[Map[String, Option[Int]]]("{\"foo\": 2,\"bar\":null}")
+        .mustEqual(
+          Some(Map("foo" -> Some(2), "bar" -> None)))
+
+      // Need hints when using Options in classes
+      fromJson[Test12]("{\"s\": \"foo\", \"i\": null}", TestData.typeHints)
+        .mustEqual(Some(Test12("foo", None)))
+      fromJson[Test12]("{\"s\": \"foo\", \"i\": 1}", TestData.typeHints)
+        .mustEqual(Some(Test12("foo", Some(1))))
     }
 
     "support extracting JSON as List of primitives" in {
@@ -318,7 +359,7 @@ object JsonSpec extends Specification {
     }
 
     "support extracting JSON using Uniform types" in {
-      import scalafy.types.uniform._
+      import scalafy.collection.uniform._
 
       // Primitives
       fromJson[UniformString]("\"foo\"").mustEqual(Some(UniformString("foo")))
@@ -440,6 +481,9 @@ object JsonSpec extends Specification {
       implicit val testSettings = JsonSettings(
         IgnoreCasing,
         PrettyPrintSettings(false, 2),
+        new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"),
+        TypeHintSettings(), 
+        null, 
         OpaqueDataSettings(false),
         ReifiableSettings(true)
       )
@@ -459,7 +503,7 @@ object JsonSpec extends Specification {
         case _ => "no match"
       }).mustEqual("match")
 
-      import scalafy.types.uniform._
+      import scalafy.collection.uniform._
       (fromJson[UniformList[Any]]("[[1,2],[3,4]]") match {
         case Some(xm) if (xm.isType[UniformList[UniformList[Int]]]) => "match"
         case _ => "no match"
@@ -472,10 +516,13 @@ object JsonSpec extends Specification {
         case _ => "no match"
       }).mustEqual("no match")
 
-      // Rest
+      // Reset
       implicit val jsonSettings = JsonSettings(
         IgnoreCasing,
         PrettyPrintSettings(false, 2),
+        new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"),
+        TypeHintSettings(), 
+        null, 
         OpaqueDataSettings(false),
         ReifiableSettings(false)
       )
@@ -486,6 +533,9 @@ object JsonSpec extends Specification {
       implicit val testSettings = JsonSettings(
         IgnoreCasing,
         PrettyPrintSettings(false, 2),
+        new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"),
+        TypeHintSettings(), 
+        null, 
         OpaqueDataSettings(true),
         ReifiableSettings(false)
       )
@@ -506,6 +556,9 @@ object JsonSpec extends Specification {
       implicit val jsonSettings = JsonSettings(
         IgnoreCasing,
         PrettyPrintSettings(false, 2),
+        new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"),
+        TypeHintSettings(),
+        null, 
         OpaqueDataSettings(false),
         ReifiableSettings(false)
       )
@@ -532,21 +585,23 @@ object JsonSpec extends Specification {
     }
 
     "support extracting JSON using reflection with embedded List types" in {
-      // Only Lists of type String, Int (Long), Double, and Boolean possible
-      fromJson[Test3]("{\"xs\": [\"foo\", \"bar\"]}").mustEqual(
-        Some(Test3(List("foo", "bar"))))
-      fromJson[Test4]("{\"xs1\": [\"foo\", \"bar\"], \"xs2\": [1, 2]}")
+      // Type hints required 
+      fromJson[Test3]("{\"xs\": [\"foo\", \"bar\"]}", TestData.typeHints)
+        .mustEqual(Some(Test3(List("foo", "bar"))))
+      fromJson[Test4](
+          "{\"xs1\": [\"foo\", \"bar\"], \"xs2\": [1, 2]}", TestData.typeHints)
         .mustEqual(Some(Test4(List("foo", "bar"), List(1, 2))))
-      // As expected, won't work due to type erasure... (returns Map not Test1)
-      //fromJson[Test5]("{\"xs\": [{\"s\": \"foo\"},{\"s\": \"bar\"}]}")
-      //  .mustEqual(Some(Test5(List(Test1("foo"),Test1("bar")))))
+      fromJson[Test5]("{\"xs\": [{\"s\": \"foo\"},{\"s\": \"bar\"}]}", 
+          TestData.typeHints)
+        .mustEqual(Some(Test5(List(Test1("foo"),Test1("bar")))))
     }
 
     "support extracting JSON using reflection with embedded Map types" in {
-      // Only Maps of String to String, Int (Long), Double, and Boolean possible
-      fromJson[Test6]("{\"xm\": {\"foo\": \"bar\"}}")
+      // Type hints required 
+      fromJson[Test6]("{\"xm\": {\"foo\": \"bar\"}}", TestData.typeHints)
         .mustEqual(Some(Test6(Map("foo" -> "bar"))))
-      fromJson[Test7]("{\"xm1\": {\"foo\": \"bar\"}, \"xm2\": {\"bat\": 2}}")
+      fromJson[Test7]("{\"xm1\": {\"foo\": \"bar\"}, \"xm2\": {\"bat\": 2}}",
+          TestData.typeHints)
         .mustEqual(Some(Test7(Map("foo" -> "bar"), Map("bat" -> 2))))
     }
 
@@ -570,6 +625,19 @@ object JsonSpec extends Specification {
       val test11 = new Test11("foo")
       test11.b = true
       fromJson[Test11]("{\"s\": \"foo\", \"b\": true}").mustEqual(Some(test11))
+    }
+
+    "support extracting JSON as Enumerations/singletons" in {
+      /* Doesn't work in Specs, works outside
+      case object Foo
+      fromJson[Foo.type]("\"Foo\"").mustEqual(Some(Foo)) */
+
+      fromJson[List[WeekDay.Value]]("[\"Mon\",\"Wed\"]", List(WeekDay))
+        .mustEqual(Some(List(WeekDay.Mon, WeekDay.Wed)))
+
+      val t = Test13(WeekDay.Mon)
+      fromJson[Test13]("{\"d\":\"Mon\"}", TestData.typeHints)
+        .mustEqual(Some(t))
     }
 
     "support lazy conversion to JSON using iterable/iterator" in {
@@ -767,6 +835,12 @@ object JsonSpec extends Specification {
       toJson(false).mustEqual("false")
       toJson('a').mustEqual("\"a\"")
       toJson(3: Byte).mustEqual("3")
+      toJson(BigInt("12341235123312")).mustEqual("12341235123312")
+      toJson(BigDecimal("12341235123312")).mustEqual("12341235123312")
+      val formatter = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+      toJson(formatter.parse("2012-01-01T20:01:01Z")).mustEqual(
+        "\"2012-01-01T20:01:01Z\"")
+      toJson(java.util.TimeZone.getTimeZone("PST")).mustEqual("\"PST\"")
     }
 
     "support proper encoding of string data" in {
@@ -797,6 +871,20 @@ object JsonSpec extends Specification {
       toJson(Map("foo" -> Map("bar" -> 3))).mustEqual("{\"foo\":{\"bar\":3}}")
     }
 
+    "support conversion using Option types" in {
+      toJson(None).mustEqual("null")
+      toJson(Some("foo")).mustEqual("\"foo\"")
+      toJson(Some(123)).mustEqual("123")
+      toJson(Some(List(1,2))).mustEqual("[1,2]")
+      toJson(List(Some(1),None,Some(2),None)).mustEqual("[1,null,2,null]")
+      toJson(Map("foo" -> Some(2), "bar" -> None)).mustEqual(
+        "{\"foo\":2,\"bar\":null}")
+      toJson(Test12("foo", None)).mustEqual(
+        "{\"s\":\"foo\",\"i\":null}")
+      toJson(Test12("foo", Some(1))).mustEqual(
+        "{\"s\":\"foo\",\"i\":1}")
+    }
+
    "support conversion using reflection" in {
       toJson(Test1("foo")).mustEqual("{\"s\":\"foo\"}")
       toJson(Test2("bar", 1, 2, 3, 1.0f, 2.0, 'a', true, 3)).mustEqual(
@@ -813,18 +901,22 @@ object JsonSpec extends Specification {
           "{\"10\":{\"s\":\"foo\"},\"15\":{\"s\":\"bar\"}}")
     }
 
+    "support conversion of Enumerations/singletons" in {
+      case object Foo
+      toJson(Foo).mustEqual("\"Foo\"")
+      toJson(List(WeekDay.Mon, WeekDay.Wed)).mustEqual("[\"Mon\",\"Wed\"]")
+      toJson(Test13(WeekDay.Mon)).mustEqual("{\"d\":\"Mon\"}")
+    }
+
     "support conversion using reflection with embedded List types" in {
-      // Only Lists of type String, Int (Long), Double, and Boolean possible
       toJson(Test3(List("foo", "bar"))).mustEqual("{\"xs\":[\"foo\",\"bar\"]}")
       toJson(Test4(List("foo", "bar"), List(1, 2))).mustEqual(
           "{\"xs1\":[\"foo\",\"bar\"],\"xs2\":[1,2]}")
-      // This only works in 'to' direction, not reverse
       toJson(Test5(List(Test1("foo"),Test1("bar")))).mustEqual(
           "{\"xs\":[{\"s\":\"foo\"},{\"s\":\"bar\"}]}")
     }
 
     "support conversion using reflection with embedded Map types" in {
-      // Only Maps of String to String, Int (Long), Double, and Boolean possible
       toJson(Test6(Map("foo" -> "bar"))).mustEqual(
           "{\"xm\":{\"foo\":\"bar\"}}")
       toJson(Test7(Map("foo" -> "bar"), Map("bat" -> 2))).mustEqual(
@@ -916,7 +1008,7 @@ object JsonSpec extends Specification {
       toJson(collection.mutable.OpenHashMap("name1" -> 1, "name2" -> 2))
         .mustEqual("{\"name1\":1,\"name2\":2}")
       toJson(collection.mutable.ListMap("name1" -> 1, "name2" -> 2))
-        .mustEqual("{\"name1\":1,\"name2\":2}")
+        .mustEqual("{\"name2\":2,\"name1\":1}")
     }
 
     "support field casing conversion" in {
@@ -1333,7 +1425,7 @@ case class Test1(s: String)
 case class Test2(str: String, num: Int, sht: Short, lng: Long, flt: Float, dbl: Double, ch: Char, bool: Boolean, byt: Byte)
 case class Test3(xs: List[String])
 case class Test4(xs1: List[String], xs2: List[Int])
-case class Test5(xs: List[Test1])  // not allowed
+case class Test5(xs: List[Test1]) 
 case class Test6(xm: Map[String, String])
 case class Test7(xm1: Map[String, String], xm2: Map[String, Int])
 case class Test8(t: Test1, t2: Test2) 
@@ -1343,6 +1435,8 @@ class Test9(val s: String, var i: Int) {
     val o = that.asInstanceOf[Test9]
     o.s == s && o.i == i
   }
+
+  override def toString = "Test9(" + s + "," + i + ")"
 }
 class Test10(val s: String, var i: Int) {
   def this(s: String) = this(s, 1)
@@ -1353,6 +1447,8 @@ class Test10(val s: String, var i: Int) {
     val o = that.asInstanceOf[Test10]
     o.s == s && o.i == i
   }
+
+  override def toString = "Test10(" + s + "," + i + ")"
 }
 class Test11(val s: String) {
   val l = 3L
@@ -1363,4 +1459,38 @@ class Test11(val s: String) {
     val o = that.asInstanceOf[Test11]
     o.s == s && o.b == b
   }
+
+  override def toString = "Test11(" + s + "," + l + "," + b + ")"
+}
+case class Test12(val s: String, val i: Option[Int]) {
+  def toXml(): String = {
+    if (i == None) {
+      <s>{s}</s>
+      <i></i>.mkString
+    } else {
+      <s>{s}</s>
+      <i>{i.get}</i>.mkString
+    }
+  }
+}
+trait Singleton
+case object CaseObject extends Singleton
+object WeekDay extends Enumeration {
+  val Mon, Tue, Wed, Thu, Fri, Sat, Sun = Value
+}
+case class Test13(d: WeekDay.Value)
+
+// Type hints for test classes
+object TestData {
+  val typeHints = TypeHintSettings(
+    List[Enumeration](WeekDay),
+    Map[Class[_], Map[Symbol, Manifest[_]]](
+      classOf[Test3] -> Map('xs -> manifest[List[String]]),
+      classOf[Test4] -> Map('xs1 -> manifest[List[String]], 
+          'xs2 -> manifest[List[Int]]),
+      classOf[Test5] -> Map('xs -> manifest[List[Test1]]),
+      classOf[Test6] -> Map('xm -> manifest[Map[String,String]]),
+      classOf[Test7] -> Map('xm1 -> manifest[Map[String,String]], 
+          'xm2 -> manifest[Map[String,Int]]),
+      classOf[Test12] -> Map('i -> manifest[Option[Int]]) ))
 }

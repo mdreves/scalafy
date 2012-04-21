@@ -19,9 +19,10 @@ package scalafy.types
 
 import scala.ref.{ReferenceQueue, WeakReference}
 
+import scalafy.collection.mutable.WeakIdentityHashMap
 import scalafy.collection.uniform._
 
-/** Contains features for adding meta data to objects.
+/** Support for adding meta data to objects.
   *
   * The following is a summary of features:
   * {{{
@@ -36,7 +37,7 @@ import scalafy.collection.uniform._
 package object meta {
 
   ///////////////////////////////////////////////////////////////////////////
-  // vals and implicits 
+  // Settings 
   ///////////////////////////////////////////////////////////////////////////
 
   /** Settings for enabling/disabling opaque data storage */
@@ -191,93 +192,37 @@ package object meta {
 
   object ObjectCache {
 
-    private[meta] val cache = 
-      scala.collection.mutable.Map[WrappedReference, Map[Symbol,Any]]()
-
-    private[meta] val refQueue = new ReferenceQueue[AnyRef]()
+    private val cache = WeakIdentityHashMap[AnyRef, Map[Symbol, Any]]() 
 
     def get(x: AnyRef, tag: Symbol): Option[Any] = {
-      this.synchronized {
-        refCheck()
-        cache.get(wrap(x)) match {
-          case Some(map) => map.get(tag)
-          case None => None
-        }
+      cache.get(x) match {
+        case Some(map) => map.get(tag)
+        case None => None
       }
     }
 
     def put(x: AnyRef, tag: Symbol, data: Any): Unit = {
-      this.synchronized {
-        refCheck()
-        cache.get(wrap(x)) match {
-          case Some(map) => 
-            cache += (wrap(x) -> (map + (tag -> data)))
-          case None => 
-            cache += (wrap(x) -> Map(tag -> data))
-        }
+      cache.get(x) match {
+        case Some(map) => 
+          cache += (x -> (map + (tag -> data)))
+        case None => 
+          cache += (x -> Map(tag -> data))
       }
     }
 
     def remove(x: AnyRef, tag: Symbol): Option[Any] = {
-      this.synchronized {
-        refCheck()
-        cache.get(wrap(x)) match {
-          case Some(map) =>
-            val curValue = map.get(tag)
-            val result = map - tag
-            if (result.isEmpty) cache -= wrap(x)
-            else cache += (wrap(x) -> result)
-            curValue 
-          case None => None
-        }
+      cache.get(x) match {
+        case Some(map) =>
+          val curValue = map.get(tag)
+          val result = map - tag
+          if (result.isEmpty) cache -= x
+          else cache += (x -> result)
+          curValue 
+        case None => None
       }
     }
 
-    def size: Int = {
-      this.synchronized {
-        refCheck()
-        cache.size
-      }
-    }
-
-    private def wrap(x: AnyRef) = new WrappedReference(x, refQueue)
-
-    private def refCheck() {
-      var ref = refQueue.poll
-      while (!ref.isEmpty) {
-        cache.remove(ref.get.asInstanceOf[WrappedReference])
-        ref = refQueue.poll
-      }
-    }
-
-    // For debugging
-    private[scalafy] def debug {
-      this.synchronized {
-        refCheck()
-        println("Cache size: " + cache.size + "\nObjects: " + cache)
-      }
-    }
-  }
-
-  private[meta] class WrappedReference(
-    ref: AnyRef, refQueue: ReferenceQueue[AnyRef]
-  ) extends WeakReference(ref, refQueue) {
-    val systemHashCode = System.identityHashCode(ref)
-
-    // NOTE: Don't refer to ref from constructor or we will create a 
-    //       Closure and therefore hold a reference to ref preventing its
-    //       garbage collection...
-
-    override def equals(that: Any) = {
-      if (that == null) false
-      else if (that.isInstanceOf[WrappedReference]) {
-        that.asInstanceOf[WrappedReference].hashCode == systemHashCode
-      } else {
-        System.identityHashCode(that) == systemHashCode 
-      }
-    }
-
-    override def hashCode(): Int = systemHashCode 
+    def size: Int = cache.size 
   }
 
 } // end package object

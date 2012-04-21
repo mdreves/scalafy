@@ -19,10 +19,6 @@ package scalafy.collection.uniform
 
 import scalafy.util.toClass
 
-//////////////////////////////////////////////////////////////////////////////
-// UniformMap Helpers
-//////////////////////////////////////////////////////////////////////////////
-
 /** Wrapped implementation of Map[A,B] that only allows uniform types.
   *
   * The createMap method needs to be overridden by the subclass in order to
@@ -262,7 +258,7 @@ private[uniform] trait UniformMapLike[A, B] {
     UniformMap.normalize(kvs : _*)
 }
 
-/** Wrapped implementation of Map.apply.
+/** Wrapped implementation of Map companion object for use with UniformMap 
   *
   * Only allows operations with uniform types
   */

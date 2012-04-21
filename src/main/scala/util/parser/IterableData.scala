@@ -62,8 +62,8 @@ private[parser] class IterableData[A](
       private var done = false 
 
       def hasNext: Boolean = {
-        if (done) return false 
         if (cur != null) return true 
+        if (done) return false 
 
         TextParser.parseNext(iter, settings)(objType.typeArguments(0)) match {
           case Left(l) => done = true; false
@@ -76,15 +76,17 @@ private[parser] class IterableData[A](
                   case Left(l) => done = true; false
                 }
               } else { cur = v; true }
-            case None =>  done = true; false // Done
+            case None => done = true; false // Done
           }
         }
       }
 
       def next(): B = {
-        if (cur == null) hasNext // trigger retrieval, if haven't already
-        if (done || cur == null) {
-          throw new NoSuchElementException("next on empty iterator")
+        if (cur == null) {
+          hasNext // trigger retrieval, if haven't already
+          if (done || cur == null) {
+            throw new NoSuchElementException("next on empty iterator")
+          }
         }
 
         val result = cur

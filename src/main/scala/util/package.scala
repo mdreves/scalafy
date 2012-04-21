@@ -17,14 +17,63 @@
   */
 package scalafy
 
-package object util {
+import java.util.Date
+import java.util.TimeZone
+
+package util {
 
   ///////////////////////////////////////////////////////////////////////////
-  // vals and implicits 
+  // Settings 
   ///////////////////////////////////////////////////////////////////////////
 
   case class PrettyPrintSettings(enabled: Boolean, indent: Int)
 
+  /** Settings to provided type hints in cases where information is erased.
+    *
+    * Type information is erased when Enumerations are used, or when
+    * Lists/Maps/Objects with type parameters are embedded in other objects.
+    *
+    * In the case of Enumerations the enumeration objects should be listed
+    * in the order that they should be searched for values incase there are
+    * two Enums with the same/names and/or value ids.
+    *
+    * Examples:
+    * {{{
+    * // Enumerations (in search order) 
+    * TypeHintSettings(List(MyEnumeration1, MyEnumeration2))   
+    *  
+    * // Embedded Types 
+    * case class Foo(xs: List[Int], xm: Map[String, String])
+    * TypeHintSettings(Map(
+    *   classOf[Foo] -> 
+    *     Map('xs -> manifest[List[Int]], 
+    *         'xm -> manifest[Map[String, String]] ) ))
+    */
+  class TypeHintSettings(
+    val enums: List[Enumeration], 
+    val classes: Map[Class[_], Map[Symbol, Manifest[_]]]
+  ) 
+
+  object TypeHintSettings {
+    def apply() = 
+      new TypeHintSettings(List[Enumeration](), 
+        Map[Class[_], Map[Symbol, Manifest[_]]]())
+
+    def apply(enums: List[Enumeration]) = 
+      new TypeHintSettings(enums, Map[Class[_], Map[Symbol, Manifest[_]]]())
+
+    def apply(classes: Map[Class[_], Map[Symbol, Manifest[_]]]) =
+      new TypeHintSettings(List[Enumeration](), classes)
+
+    def apply(
+      enums: List[Enumeration], 
+      classes: Map[Class[_], Map[Symbol, Manifest[_]]]
+    ) = new TypeHintSettings(enums, classes)
+  }
+
+} // end package
+
+package object util {
 
   ///////////////////////////////////////////////////////////////////////////
   // Helpers
@@ -73,21 +122,21 @@ package object util {
     else true
   }
 
+  // Helper to convert to Ref types
+  private[scalafy] def toRef(x: Any): AnyRef = x match {
+    case i: Int => Int.box(i) 
+    case s: Short => Short.box(s)
+    case l: Long => Long.box(l)
+    case f: Float => Float.box(f)
+    case d: Double => Double.box(d)
+    case b: Boolean => Boolean.box(b)
+    case c: Char => Char.box(c)
+    case b: Byte => Byte.box(b) 
+    case x => x.asInstanceOf[AnyRef]
+  }
+
   /** Converts type to Refs (only boxed types can be used with reflection) */
   private[scalafy] def toRefArray(xs: Iterable[Any]): Array[AnyRef] = {
-    // Helper to convert to Ref types
-    def toRef(x: Any): AnyRef = x match {
-      case i: Int => Int.box(i) 
-      case s: Short => Short.box(s)
-      case l: Long => Long.box(l)
-      case f: Float => Float.box(f)
-      case d: Double => Double.box(d)
-      case b: Boolean => Boolean.box(b)
-      case c: Char => Char.box(c)
-      case b: Byte => Byte.box(b) 
-      case x => x.asInstanceOf[AnyRef]
-    }
-
     val refArray = new Array[AnyRef](xs.size)
     var i = 0
     for (x <- xs) {
@@ -116,8 +165,10 @@ package object util {
 
   /** Runtime check if type is primtive type (String, Symbol are included) */
   private[scalafy] def isPrimitiveType(clazz: Class[_]): Boolean = {
-    (clazz == classOf[String] || clazz == classOf[Symbol] || 
-      !isNullAllowed(clazz)) 
+    (clazz == classOf[String] || clazz == classOf[Symbol] ||
+      !isNullAllowed(clazz) || clazz == classOf[BigInt] || 
+      clazz == classOf[BigDecimal] || clazz == classOf[Date] ||
+      clazz == classOf[TimeZone]) 
   }
 
   private[scalafy] def isTupleType(m: Manifest[_]): Boolean = 

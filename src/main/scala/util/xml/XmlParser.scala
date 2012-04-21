@@ -17,16 +17,19 @@
   */
 package scalafy.util.xml
 
+import java.io.StringWriter
+import java.io.Writer
+import java.util.Date
+import java.util.TimeZone
+
 import scala.io.Source
 import scala.xml._
 import scala.xml.parsing.XhtmlEntities
 import scala.xml.pull._
 
 import scalafy.collection.mutable.ChunkedIterator
-import scalafy.collection.mutable.DefaultChunkedIterator
-import scalafy.collection.mutable.StringChunkedIterator
+import scalafy.collection.uniform._
 import scalafy.types.meta._
-import scalafy.types.uniform._
 import scalafy.util._
 import scalafy.util.casing._
 import scalafy.util.parser._
@@ -47,20 +50,27 @@ object XmlParser {
     reverse
   }
 
-  /** Parser for fromXml package function
-    *
-    * @return either String error msg or data of given type
-    */
   def fromXml[A : Manifest](
     xml: Iterable[Char], settings: XmlSettings
   ): Either[String, A] = {
-    val source = Source.fromIterable(xml)
+    fromXml(Source.fromIterable(xml), settings)
+  }
+
+  /** Returns either String error msg or data of given type. */
+  def fromXml[A : Manifest](
+    source: Source, settings: XmlSettings
+  ): Either[String, A] = {
     val xmlReader = new XMLEventReader(source)
 
-    if (!xmlReader.hasNext) return Left("empty input")
+    if (!xmlReader.hasNext) {
+      xmlReader.stop()
+      return Left("empty input")
+    }
+
+    val iter = xmlReader.buffered
 
     // Skip over root tag
-    xmlReader.next match {
+    iter.next match {
       case EvElemStart(_, settings.rootTag, attrs, _) => 
         if (isNil(attrs)) {
           xmlReader.stop()
@@ -69,41 +79,57 @@ object XmlParser {
           else return Left("expecting " + manifest[A] + " but recieved null")
         }
 
+        if (!iter.hasNext) {
+          xmlReader.stop()
+          return Left("missing closing tag")
+        }
+
+        if (iter.head.isInstanceOf[EvElemEnd] && 
+            iter.head.asInstanceOf[EvElemEnd].label == settings.rootTag) {
+          xmlReader.stop()
+          if (manifest[A].erasure == classOf[Option[_]])
+            return Right(None.asInstanceOf[A])
+          else
+            return Left("unexpected end of input while parsing: " + manifest[A])
+        }
+
       case _ => 
         xmlReader.stop()
         return Left("invalid input: expecting <" + settings.rootTag + ">")
     }
 
     val result = TextParser.fromText(
-        createParserIterator(xmlReader.buffered, settings), settings) match {
+        createParserIterator(iter, xmlReader, settings), settings) match {
       case Left(l) =>
         // TODO add wrapping iterator to count chars read
         Left(errorPrefix + l + " (chars read: " + "unknown" + ")")
       case Right(r) => Right(r)
     }
 
-    xmlReader.stop()
     result
   }
 
-  /** fromXml returning Option */
-  def fromXmlOption[A : Manifest](
-    xml: Iterable[Char], settings: XmlSettings
-  ): Option[A] = fromXml(xml, settings) match {
-    case Right(r) => Some(r)
-    case Left(l) => None
-  }
-
-  /** Parser for toXml package function */
   def toXml(
     value: Any, 
     settings: XmlSettings 
   ): String = {
-    if (value == null) "<" + settings.rootTag + " xsi:nil=\"true\"/>"
+    val writer = new StringWriter()
+    toXml(writer, value, settings)
+    writer.toString
+  }
+  
+  def toXml(
+    writer: Writer,
+    value: Any, 
+    settings: XmlSettings 
+  ): Unit = {
+    if (value == null || value == None) 
+      writer.write("<" + settings.rootTag + " xsi:nil=\"true\"/>")
     else {
-      "<" + settings.rootTag + ">" +
-        TextParser.toText(value, createParserConverter(settings), settings) +
-      "</" + settings.rootTag + ">"
+      writer.write("<" + settings.rootTag + ">")
+      TextParser.toText(
+        writer, value, createParserConverter(settings), settings)
+      writer.write("</" + settings.rootTag + ">")
     }
   }
 
@@ -111,7 +137,9 @@ object XmlParser {
   // Helpers
 
   protected[xml] def createParserIterator[A : Manifest](
-    iter: BufferedIterator[XMLEvent], settings: XmlSettings
+    iter: BufferedIterator[XMLEvent], 
+    xmlReader: XMLEventReader, 
+    settings: XmlSettings
   ): Iterator[ParseEvent] = new Iterator[ParseEvent] { 
 
     private var prevEvent: XMLEvent = _ 
@@ -119,9 +147,11 @@ object XmlParser {
     private var fieldName: String = _ 
     private var addFieldSep = false
     private var addNil = false
+    private var addEmpty = false  // Used for Option processing
  
     def hasNext = 
-      (addFieldName || addFieldSep || prevEvent != null || iter.hasNext) 
+      (addFieldName || addFieldSep || addEmpty || prevEvent != null || 
+        iter.hasNext) 
 
     def next(): ParseEvent = {
       if (addFieldName) {
@@ -137,8 +167,19 @@ object XmlParser {
         addNil = false
         NullValue("null")
 
+      } else if (addEmpty) {
+        addEmpty = false
+        EmptyValue
+
       } else if (!iter.hasNext && prevEvent != null) {
-        ObjectEnd     // final close
+        if (prevEvent.isInstanceOf[EvElemEnd] && 
+            prevEvent.asInstanceOf[EvElemEnd].label == settings.rootTag) {
+          prevEvent = null
+          Whitespace
+        } else {
+          prevEvent = null
+          ObjectEnd     // final close
+        }
       
       } else {
         val nextEvent = iter.next 
@@ -153,16 +194,20 @@ object XmlParser {
                 case Left(l) => return ParseError(l) 
               } else label 
 
-            if (tag == settings.arrayItemTag) {
-              if (isNil(attrs.copy(attrs))) addNil = true 
+            if (tag == settings.rootTag) {
+              Whitespace
+            } else if (tag == settings.arrayItemTag) {
+              if (isNil(attrs.copy(attrs))) addNil = true
+              if (!addNil && isNextEndTag()) addEmpty = true
 
-              if (isPrevArrayItem()) Whitespace // same array 
+              if (isPrevArrayItem() || isPrevText()) Whitespace // same array 
               else ArrayStart
             } else {
               if (isNil(attrs.copy(attrs))) {
                 addFieldSep = true  // add simulated field separator
                 addNil = true       // field is null
               }
+              if (!addNil && isNextEndTag()) addEmpty = true
 
               if (isPrevField()) {
                 addFieldSep = true  // add simulated field separator
@@ -175,26 +220,32 @@ object XmlParser {
             }
 
           case EvElemEnd(_, tag) =>
-            if (tag == settings.arrayItemTag) {
+            if (tag == settings.rootTag) {
+              Whitespace
+            } else if (tag == settings.arrayItemTag) {
               // If next is <item> then continuation of array
-              if (isNextArrayItem()) Whitespace
+              if (isNextArrayItem() || isNextText()) Whitespace
               else ArrayEnd
             } else {
-              if (isNextField()) Whitespace // closing tag for field
+              if (isNextField() || isNextText()) Whitespace // closing field tag
               else ObjectEnd
             }
 
           case e: EvText =>
-            if (iter.hasNext && iter.head.isInstanceOf[EvElemStart]) {
-              Whitespace // this is just whitespace between elements
-            } else readText(e) match {
-              case Right(r) => chooseBestEvent(r)
+            readText(e) match {
+              case Right(r) =>
+                if (iter.hasNext && iter.head.isInstanceOf[EvElemStart])
+                  Whitespace // this is just whitespace between elements
+                else chooseBestEvent(r)
               case Left(l) => ParseError(l)
             }
           
           case e: EvEntityRef => 
             readText(e) match {
-              case Right(r) => chooseBestEvent(r)
+              case Right(r) => 
+                if (iter.hasNext && iter.head.isInstanceOf[EvElemStart])
+                  Whitespace // this is just whitespace between elements
+                else chooseBestEvent(r)
               case Left(l) => ParseError(l)
             }
 
@@ -207,6 +258,7 @@ object XmlParser {
         }
       
         prevEvent = nextEvent
+        if (!iter.hasNext) xmlReader.stop() // cleanup
         result
       }
     }
@@ -217,16 +269,8 @@ object XmlParser {
         case Left(l) => return ParseError("could not decode: " + l)
       }
 
-      if (manifest[A] == manifest[String] || 
-          manifest[A] == manifest[Symbol] || 
-          manifest[A] == manifest[Char]) {
-        StringValue(text)
-      } else if (text.length > 0 && (text(0) == '-' || text(0).isDigit)) {
-        NumberValue(text)
-      } else if (text.equalsIgnoreCase("true") || 
-          text.equalsIgnoreCase("false")) {
-        BooleanValue(text.toLowerCase)
-      } else StringValue(text)
+      // Let TextParser do the work in it's parseString method..
+      StringValue(text)
     }
 
     /** Recursively reads the text and entity ref data */
@@ -256,6 +300,13 @@ object XmlParser {
     private def isNextText(): Boolean =
       (iter.hasNext && (iter.head.isInstanceOf[EvText] || 
         iter.head.isInstanceOf[EvEntityRef]))
+
+    private def isPrevText(): Boolean =
+      (prevEvent != null && (prevEvent.isInstanceOf[EvText] || 
+        prevEvent.isInstanceOf[EvEntityRef]))
+
+    private def isNextEndTag(): Boolean =
+      (iter.hasNext && iter.head.isInstanceOf[EvElemEnd])
 
     private def isPrevArrayItem(): Boolean =
       (prevEvent != null && prevEvent.isInstanceOf[EvElemEnd] &&
@@ -329,6 +380,9 @@ object XmlParser {
         }
 
       case ArrayItemSeparator => ""
+      
+      case EmptyValue =>
+        "<" + fieldNames.head + " xsi:nil=\"true\"/>" 
 
       case ArrayEnd =>
         if (!fieldNames.isEmpty) fieldNames = fieldNames.tail
@@ -350,6 +404,12 @@ object XmlParser {
         ""
 
       case ObjectEnd =>
+        // Ending ObjectNameValuePairSeparator
+        if (!fieldNames.isEmpty) {
+          fieldNames = fieldNames.tail
+          nextIsFieldName = true
+        }
+        // End of Object
         if (!fieldNames.isEmpty) {
           val tag = fieldNames.head
           // Special case for array items at root (don't want to remove tag)

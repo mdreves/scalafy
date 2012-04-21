@@ -17,6 +17,9 @@
   */
 package test.scalafy.collection.uniform
 
+import java.util.Date
+import java.util.TimeZone
+
 import org.specs2.mutable.Specification
 
 import scalafy.collection.uniform._
@@ -38,6 +41,15 @@ object UniformTypesSpec extends Specification {
       fromUniformPrimitive(UniformBoolean(true)).mustEqual(Some(true))
       fromUniformPrimitive(UniformChar('a')).mustEqual(Some('a'))
       fromUniformPrimitive(UniformByte(0)).mustEqual(Some(0))
+      fromUniformPrimitive(UniformBigInt(BigInt("1234")))
+        .mustEqual(Some(BigInt("1234")))
+      fromUniformPrimitive(UniformBigDecimal(BigDecimal("1234")))
+        .mustEqual(Some(BigDecimal("1234")))
+      val d = new Date
+      fromUniformPrimitive(UniformDate(d)).mustEqual(Some(d))
+      fromUniformPrimitive(UniformTimeZone(TimeZone.getTimeZone("PST")))
+        .mustEqual(Some(TimeZone.getTimeZone("PST")))
+      
     }
   }
 
@@ -182,6 +194,14 @@ object UniformTypesSpec extends Specification {
       toUniformPrimitive(true).mustEqual(UniformBoolean(true))
       toUniformPrimitive('a').mustEqual(UniformChar('a'))
       toUniformPrimitive(0.toByte).mustEqual(UniformByte(0))
+      toUniformPrimitive(BigInt("1234"))
+        .mustEqual(UniformBigInt(BigInt("1234")))
+      toUniformPrimitive(BigDecimal("1234"))
+        .mustEqual(UniformBigDecimal(BigDecimal("1234")))
+      val d = new Date
+      toUniformPrimitive(d).mustEqual(UniformDate(d))
+      toUniformPrimitive(TimeZone.getTimeZone("PST"))
+        .mustEqual(UniformTimeZone(TimeZone.getTimeZone("PST")))
     }
   }
 
@@ -362,6 +382,11 @@ object UniformTypesSpec extends Specification {
       UniformList(true,false).mustEqual(UniformList(true,false))
       UniformList('a','b').mustEqual(UniformList('a','b'))
       UniformList(1.toByte, 2.toByte).mustEqual(UniformList(1.toByte,2.toByte))
+      UniformList(BigInt("1234"), BigInt("34")).mustEqual(
+        UniformList(BigInt("1234"), BigInt("34")))
+      val d1 = new Date
+      val d2 = new Date
+      UniformList(d1, d2).mustEqual(UniformList(d1, d2))
     }
 
     "support embedded UniformLists and UniformMaps" in {
@@ -876,6 +901,14 @@ object UniformTypesSpec extends Specification {
         UniformMap('test -> 'a','test2 -> 'b'))
       UniformMap('test -> 1.toByte, 'test2 -> 2.toByte).mustEqual(
         UniformMap('test -> 1.toByte,'test2 -> 2.toByte))
+      UniformMap('test -> BigDecimal("1234"), 'test2 -> BigDecimal("34"))
+        .mustEqual(
+          UniformMap('test -> BigDecimal("1234"),'test2 -> BigDecimal("34")))
+      UniformMap('test -> TimeZone.getTimeZone("PST"), 
+          'test2 -> TimeZone.getTimeZone("UTC"))
+        .mustEqual(
+          UniformMap('test -> TimeZone.getTimeZone("PST"), 
+             'test2 -> TimeZone.getTimeZone("UTC")))
     }
 
     "support embedded UniformLists and UniformMaps" in {

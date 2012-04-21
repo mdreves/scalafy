@@ -63,6 +63,6 @@ private[parser] class UniformMapData[A](
     None
   }
 
-  override protected def createManifestUsing[A : Manifest]: Manifest[_] =
-    manifest[UniformMap[A]]
+  override protected def createManifestUsing[T : Manifest]: Manifest[_] =
+    manifest[UniformMap[T]]
 }

@@ -70,11 +70,13 @@ import net.liftweb.json.Serialization.{read, write}
   *       to file   : 0m3.755s
   *       from file : 0m5.167s     (skipping over until last)
   *
-  *  Stream[TestClass2] @ 1,000,000 items
+  *  NOTE: Stream has memory issues at 1,000,000 items even if drop used
   *
+  *  Iterator[TestClass2] @ 1,000,000 items
+  *   
   *     scalafy: 
-  *       to file   : 0m28.016s
-  *       from file :           (out of memory issues)
+  *       to file   : 0m27.874s
+  *       from file : 0m32.013s
   */
 object PerfTests {
 
@@ -139,8 +141,11 @@ object PerfTests {
 
   def fromFileTest {
     val r = new BufferedReader(new FileReader("test.json"))
-    println(fromJson[List[TestClass2]](r).get.head)
-    //println(fromJson[Stream[TestClass2]](r).get.last)
+    //println(fromJson[List[TestClass2]](r).get.head)
+    //var s = fromJson[Stream[TestClass2]](r).get
+    //while (!s.isEmpty) s = s.drop(1)
+    val i = fromJson[Iterator[TestClass2]](r).get
+    while (i.hasNext) i.next()
     r.close()
   }
 

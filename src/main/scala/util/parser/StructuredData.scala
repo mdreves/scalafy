@@ -17,7 +17,9 @@
   */
 package scalafy.util.parser
 
-/** Base for encapsulations of structured data (arrays, objects) being parsed
+import scalafy.types.reifiable.Reifiable
+
+/** Trait for encapsulations of structured data (arrays, objects) being parsed
  *
  * Subclasses should encapsulate not only the data parsed, but also  
  * information about the manifest that was requested to be matched AND the
@@ -27,10 +29,11 @@ package scalafy.util.parser
  * read in addition to what was requested, we can supported upgrading the 
  * the manifest from Any to a more specific type for use with reifiable types.
  */
-private[parser] abstract class StructuredData[A](
+private[parser] abstract class StructuredData[A]( 
   val objType: Manifest[A],  // type being parsed (List, Vector, Tuple, ...)
   val settings: ParserSettings
 ) {
+
   private var actualItemType: Manifest[_] = null // actual item type used
 
   /** Returns true if this container is upgradeable to more specific type */
@@ -62,12 +65,12 @@ private[parser] abstract class StructuredData[A](
     }
   }
 
-  /** Creates a new manifest using the given type - override
+  /** Creates a new manifest using the given inner type - override
     * 
     * This is used when upgrading from Any to a more specific type and should
     * be overridden if isContainerUpgradeable is set to true.
     */
-  protected def createManifestUsing[A : Manifest]: Manifest[_] = {
+  protected def createManifestUsing[T : Manifest]: Manifest[_] = {
      throw new Error("Not supported") 
   }
 

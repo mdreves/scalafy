@@ -17,170 +17,65 @@
   */
 package scalafy.util
 
+import java.io.Writer
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+
+import scala.io.Source
+
 import scalafy.types.meta.OpaqueDataSettings
 import scalafy.types.reifiable.ReifiableSettings
 import scalafy.util.casing._
 import scalafy.util.parser.ParserSettings
 
-/** Contains utils for XML parsing.
+/** Utils for XML parsing.
   *
-  * The XML must conform to the following format:
-  *
-  * 
-
-  * The rest of the features are similar to the JSON utilities. The following
-  * is a summary of features:
+  * The XML must follow certain guidelines. XML attributes are not used except
+  * for specifying nil values and when escaping is required. The elements are
+  * always placed under a single root element called 'result'. Lists items are
+  * always called 'item' and are added in the order they appear in the list. Do
+  * not mix list items with non-list items. In cases where a field name
+  * contains characters reserved by XML (e.g. <, >, ', ", or &), the XML
+  * element name will be set to '__escaped__' and the element will contain a
+  * '__value__' attribute containing the name that would have been used but
+  * escaped using proper entity encodings (e.g. & lt;, & gt;, & quot;, & amp;).
+  * The following are examples of valid XML:
   * {{{
-  * // Parsing
-  * fromXml[List[Int]]("[1,2,3]")           // Option[List[Int]] 
-  * toXml(List(1,2,3))                      // "[1,2,3]"
-  * fromXml[List[Short]]("[1,2,3]")         // Option[List[Short]] 
-  * toXml(List[Short](1,2,3))               // "[1,2,3]"
-  * fromXml[List[Long]]("[1,2,3]")          // Option[List[Long]]
-  * toXml(List[Long](1,2,3))                // "[1,2,3]"
-  * fromXml[List[Float]]("[1.0,2.0]")       // Option[List[Float]]
-  * toXml(List[Float](1.0,2.0))             // "[1.0,2.0]"
-  * fromXml[List[Double]]("[1.0,2.0]")      // Option[List[Double]]
-  * toXml(List[Double](1.0,2.0))            // "[1.0,2.0]"
-  * fromXml[List[Boolean]]("[true, false]") // Option[List[Boolean]]
-  * toXml(List[Boolean](true, false))       // "[true,false]"
-  * fromXml[List[Char]]("[\"a\",\"b\"]")    // Option[List[Char]]
-  * toXml(List[Char]('a','b'))              // "[\"a\",\"b\"]"
-  * fromXml[List[String]]("[\"a\",\"b\"]")  // Option[List[String]]
-  * toXml(List[Char]("a","b"))              // "[\"a\",\"b\"]"
-  *
-  * fromXml[Map[Symbol,String]]("{\"foo\": \"bar\"}")
-  * toXml(Map('foo -> "bar"))              // "{\"foo\": \"bar\"}"
-  * fromXml[Map[Symbol,List[Int]]]("{\"foo\": [1,2,3]}")
-  * toXml(Map('foo -> [1,2,3]))            // "{\"foo\": [1,2,3]}"
-  *
-  * // Parsing (Maps from any primitive type) 
-  * fromXml[Map[String,String]]("{\"foo\": \"bar\"}")
-  * toXml(Map("foo" -> "bar"))             // "{\"foo\": \"bar\"}"
-  * fromXml[Map[Int,Int]]("{\"1\": 2, \"2\": 4}")
-  * toXml(Map(1 -> 2, 2 -> 4))             // "{\"1\": 2, \"2\": 4}"
-  *
-  * // Parsing (lazy parsing)
-  * fromXml[Stream[Int]]("[1,2,3]").get take 2 print // 1, 2 
-  * fromXml[Iterable[Int]]("[1,2,3]").get.iterator   // hasNext/next...
-  * fromXml[Iterator[Int]]("[1,2,3]").get            // hasNext/next...
-  *
-  * // Parsing (tuple data)
-  * fromXml[Tuple2[Int,Int]]("[1,2]")
-  * toXml(1 -> 2)                          // "[1,2]"
-  * fromXml[List[Tuple2[Symbol,Int]]]("[[x,1],[y,2]]")
-  * toXml(List('x -> 1, 'y -> 2))          // "[[x,1],[y,2]]"
-  *
-  * // convenience function for above - handles errors gracefully
-  * val iter = xmlIterator[Int]("[1,2,3]").map(_ + 1) 
-  * iter.next               // 2 
-  *
-  * // Parsing (with field casing conversion)
-  * // Some(Map("myField" -> 1))
-  * fromXml[Map[String,Int]]("{\"MyField\": 1}", LowerCamelCase)
-  * toXml(Map("myField" -> 1), UpperCamelCase) // "{\"MyField\": 1}"
-  *
-  * // Some(Map("my_field" -> 1))
-  * fromXml[Map[String,Int]]("{\"MyField\": 1}", LowerSnakeCase)
-  * toXml(Map("MyField" -> 1), LowerSnakeCase) // "{\"my_field\": 1}"
-  *
-  * // Parsing (using Any - chooses best type)
-  * fromXml[Any]("[1,2,3]")         // Option[Any] (points to List[Int]) 
-  * fromXml[Any]("[1,9999999999]")  // Option[Any] (points to List[Long]) 
-  * fromXml[List[Any]]("[1,2,3]")   // Option[List[Any]] (points to List[Int]) 
-  * fromXml[Map[String,Any]]("{\"foo\": \"bar\"}")  // ...  Map[Symbol,String] 
-  * fromXml[Any]("{\"foo\": 1}")    // Option[Any] (points to Map[Symbol,Int]) 
-  *
-  * // Parsing (using reflection)
+  * // Classes
   * case class Foo(s: String, i: Int)
-  * fromXml[List[Foo]]("[{\"s\": \"foo\", \"i\": 1}]")  // Option[List[Foo]]
-  * toXml(List(Foo("foo", 1)))
-  * fromXml[Map[Int,Foo]]("{\"1\": {\"s\": \"foo\", \"i\": 1}}")
-  * toXml(Map(1 -> Foo("foo", 1)))
+  * toXml(List(Foo("test", 3), Foo("test2", 10)))
   *
-  * val iter = xmlIterator[Foo]("[{\"s\": \"foo\", \"i\": 1}]")
-  * iter.next               // Foo("foo", 1) 
+  * <result>
+  *  <item>
+  *    <s>test</s>
+  *    <i>3</i>
+  *  </item>
+  *  <item>
+  *    <s>test2</s>
+  *    <i>10</i>
+  *  </item>
+  * </result>
   *
-  * // Parsing (using reflection - different constructors)
-  * class Foo(val s: String, val i: Int) {
-  *   def this(s: String) = this(s, 1)
-  *   def this(i: Int) = this("bar", i)
-  * }
-  * fromXml[List[Foo]]("[{\"s\": \"foo\"}]")  // List(Foo("foo", 1)) 
-  * fromXml[List[Foo]]("[{\"i\": 10}]")       // List(Foo("bar", 10)) 
-  * 
-  * // Parsing (using reflection - embedded objects)
-  * case class Bar(f: Foo)
-  * fromXml[List[Bar]]("[{\"f\": {\"s\": \"foo\", \"i\": 1}}]")
+  * // Maps
+  * toXml(Map(5 -> "test", 20 -> null))
   *
-  * // Parsing (using reflection - embedded Seqs/Maps)
-  * case class Baz(xs: List[Int])
-  * fromXml[List[Baz]]("[{\"xs\": [1,2,3]}]") // List(Baz("xs", List(1,2,3))) 
-  *
-  * NOTE: Due to type erasure, only Lists/Maps of the default types are
-  *       supported (String, Int (Long), Double, and Boolean). Maps are from
-  *       Symbol to these types. Use of other types will return WITHOUT error
-  *
-  * // Parsing (using Uniform types)
-  * fromXml[UniformMap[Any]]("{\"foo\": 1}")  // Option[UniformMap[Any]]
-  * toXml(UniformMap('foo -> 1))              // "{\"foo\":1}"
-  * fromXml[UniformList[UniformList[Any]]]("[[1,2],[3,4]]")
-  * toXml(UniformList(UniformList(1,2),UniformList(3,4))) // "[[1,2],[3,4]]"
-  * 
-  * // Parsing (using Any in combination with Reifiable)
-  * implicit val xmlSettings = XmlSettings(
-  *   IgnoreCasing,
-  *   PrettyPrintSettings(true, 2),
-  *   OpaqueDataSettings(false),
-  *   ReifiableSettings(true)                 // enable reifiable
-  * )
-  *
-  * val v = fromXml[Any]("[1,9999999999]") 
-  * v.isType[List[Int]]              // false 
-  * v.isType[List[Long]]             // true 
-  *
-  * val v = fromXml[Any]("{\"foo\": 1}") 
-  * v.isType[Map[Symbol,String]]     // false 
-  * v.isType[Map[Symbol,Int]]        // true
-  *
-  * // Parsing (using other container types - any scala mutable/immutable type)
-  * fromXml[Vector[Int]]("[1,2,3]") // Option[Vector[Int]] 
-  * toXml(Vector(1,2,3))            // "[1,2,3]"
-  * fromXml[Seq[Int]]("[1,2,3]")    // Option[Seq[Int]] 
-  * toXml(Seq(1,2,3))               // "[1,2,3]"
-  * fromXml[ListBuffer[Int]]("[1,2,3]") // Option[ListBuffer[Int]] 
-  *
-  * // Parsing (pretty printing)
-  * // "{
-  * //    \"foo\": \"bar\"
-  * //  }"
-  * toXml(Map("foo" -> "bar"), true, 2) 
-  *
-  * // Extracting
-  * "{\"foo\": 1}" match {
-  *   case Xml(xm) =>
-  *     println("matched: " + xm)    // prints: Map(foo -> 1) 
-  * }
-  *
-  * // Combining with other types
-  * // Map("foo" -> "bar", "foo2" -> "bar2")
-  * Map("foo" -> "bar").withXml("{\"foo2\": \"bar2\"}") { _ ++ _ }
-  *
-  * // Configuring default settings
-  * implicit val xmlSettings = XmlSettings(
-  *   IgnoreCasing,                 // ignore casing (default)
-  *   PrettyPrintSettings(true, 2), // pretty print with 2 spaces (default)
-  *   "result"                      // root element called "result" (default)
-  *   "item"                        // array items tagged with "item" (default)
-  *   OpaqueDataSettings(false),    // disable opaque data store (default)
-  *   ReifiableSettings(false)      // disable reifiable types (default)
-  * )
+  * <result>
+  *  <__escaped __value="5">test</__escaped__>
+  *  <__escaped __value="20" xsi:nil="true"></__escaped__>
+  * </result>
   * }}}
+  *
+  * The rest of the features are similar to the [[scalafy.util.json]]
+  * utilities (primitive/list/map/object conversion, lazy parsing, field casing
+  * conversion, reifaible type support, uniform types, pretty printing,
+  * extration, ...). Just substitute fromJson with fromXml and toJson with
+  * toXml in the examples provided. Note the XmlSettings supports two
+  * additional settings for the root element tag and array item tag names.
   */
 package object xml {
 
   ///////////////////////////////////////////////////////////////////////////
-  // vals and implicits 
+  // Settings 
   ///////////////////////////////////////////////////////////////////////////
 
   case class XmlSettings(
@@ -188,6 +83,9 @@ package object xml {
     prettyPrintSettings: PrettyPrintSettings,
     rootTag: String,
     arrayItemTag: String,
+    dateFormatter: DateFormat,
+    typeHintSettings: TypeHintSettings,
+    classLoader: ClassLoader,
     opaqueDataSettings: OpaqueDataSettings,
     reifiableSettings: ReifiableSettings
   ) extends ParserSettings
@@ -197,6 +95,9 @@ package object xml {
     PrettyPrintSettings(false, 2),
     "result",
     "item",
+    new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"),
+    TypeHintSettings(),
+    null, 
     OpaqueDataSettings(false),
     ReifiableSettings(false))
 
@@ -205,81 +106,79 @@ package object xml {
   // Package Functions
   ///////////////////////////////////////////////////////////////////////////
 
-  /** Converts RFC 4627 compatible XML data to a specified type.
+  /** Converts XML text to a specified type.
     *
-    * If the type is set to Any then the most appropriate type will be
-    * choosen automatically. The primitives String, Int (Long), Double, and 
-    * Boolean are used. Seqs can contain primitives, other Seqs, or Maps. 
-    * Maps are from Symbol to either a primitive, Seq, or another Map.
-    * If a Seq or Map contains one ore more Longs and the rest are Ints, the
-    * entire Seq or Map will be updated to a Seq or Map of Longs. 
-    *
-    * Specific types may also be passed. In this case, any scala container type
-    * List, Vector, Seq, Map, ... (both immutable and mutable) may be used
-    * in combination with any primitive type (String, Symbol, Int, Short, Long,
-    * Float, Double, Boolean, Char, or Byte).
-    *
-    * Other object types are supported as long as a conversion is possible
-    * using reflection. This limits conversions to objects make up of 
-    * primitive types or other objects created from primitive types. Seq
-    * and Maps are supported within objects, but due to type erasure only the
-    * Seq/Maps that are converted from Any as specified above are supported.
-    *
-    * When reflection is used, the XML field names must match the object field
-    * names. They must also be specified in the order the constructor takes
-    * them. Multiple constructors may be used as long as a constructor matching
-    * the fields passed exists.
-    * 
-    * Examples:
-    * {{{
-    * // Type is List[Int]
-    * val listOfInt = fromXml[List[Int]]("[1, 2, 3]")
-    *
-    * // Type is Any pointing to default List[Int] type
-    * val listOfInt = fromXml[Any]("[1, 2, 3]")
-    *
-    * // Type is Map[Symbol, List[Int]]
-    * val mapOfSymbolToListOfInt = 
-    *   fromXml[Map[Symbol, List[Int]]]("{ \"foo\": [1, 2, 3] }")
-    *
-    * // Type is List[Foo]
-    * case class Foo(s: String, i: Int)
-    * fromXml[List[Foo]]("[{\"s\": \"foo\", \"i\": 1}]") 
-    * }}}
-    *
-    * Symbol/String names used in Maps can have an automatic casing convertion 
-    * done by setting the implicit fieldCasing parameter. For example:
-    * {{{
-    * implicit val fieldCasing = LowerCamelCase
-    * // or disable conversion
-    * implicit val fieldCasing = IgnoreCasing
-    * }}}
+    * See [[scalafy.util.json]] for a list of examples (substitute
+    * fromJson with fromXml)
     *
     * @param xml XML string 
-    * @return List, Map, or Primitive 
+    * @return object of given type A
     */
   def fromXml[A](xml: Iterable[Char])(
     implicit m: Manifest[A], settings: XmlSettings 
-  ): Option[A] = XmlParser.fromXmlOption[A](xml, settings) 
+  ): Option[A] = XmlParser.fromXml[A](xml, settings) match {
+    case Right(r) => Some(r)
+    case Left(l) => None
+  }
+
+  def fromXml[A](source: Source)(
+    implicit m: Manifest[A], settings: XmlSettings 
+  ): Option[A] = XmlParser.fromXml[A](source, settings) match {
+    case Right(r) => Some(r)
+    case Left(l) => None
+  }
+
 
   /** fromXml with an explicit casing for fields */
   def fromXml[A](xml: Iterable[Char], fieldCasing: Casing)(
     implicit m: Manifest[A], settings: XmlSettings 
   ): Option[A] = {
-    XmlParser.fromXmlOption(xml,
+    fromXml(xml)(m,
       XmlSettings(fieldCasing, settings.prettyPrintSettings, settings.rootTag, 
-        settings.arrayItemTag, settings.opaqueDataSettings, 
+        settings.arrayItemTag, settings.dateFormatter, 
+        settings.typeHintSettings, settings.classLoader, 
+        settings.opaqueDataSettings, settings.reifiableSettings))
+  }
+
+  /** fromXml with an explicit typeHintSetting */
+  def fromXml[A](
+    xml: Iterable[Char], typeHintSettings: TypeHintSettings 
+  )(
+    implicit m: Manifest[A], settings: XmlSettings
+  ): Option[A] = {
+    fromXml(xml)(m,
+      XmlSettings(settings.fieldCasing, settings.prettyPrintSettings,
+        settings.rootTag, settings.arrayItemTag, settings.dateFormatter,
+        typeHintSettings, settings.classLoader, 
+        settings.opaqueDataSettings, settings.reifiableSettings))
+  }
+
+  /** fromXml with explicit enumeration type hints */
+  def fromXml[A](
+    xml: Iterable[Char], enumTypeHints: List[Enumeration] 
+  )(
+    implicit m: Manifest[A], settings: XmlSettings
+  ): Option[A] = {
+    fromXml(xml)(m,
+      XmlSettings(settings.fieldCasing, settings.prettyPrintSettings,
+        settings.rootTag, settings.arrayItemTag, settings.dateFormatter,
+        TypeHintSettings(enumTypeHints, settings.typeHintSettings.classes), 
+        settings.classLoader, settings.opaqueDataSettings, 
         settings.reifiableSettings))
   }
 
-  /** fromXml with an explicit reifiable setting */
-  def fromXml[A](xml: Iterable[Char], useReifiableType: Boolean)(
-    implicit m: Manifest[A], settings: XmlSettings 
+  /** fromXml with explicit class type hints */
+  def fromXml[A](
+    xml: Iterable[Char], classTypeHints: Map[Class[_], Map[Symbol,Manifest[_]]] 
+  )(
+    implicit m: Manifest[A], settings: XmlSettings
   ): Option[A] = {
-    XmlParser.fromXmlOption(xml,
+    fromXml(xml)(m,
       XmlSettings(settings.fieldCasing, settings.prettyPrintSettings,
-        settings.rootTag, settings.arrayItemTag, settings.opaqueDataSettings,
-        ReifiableSettings(useReifiableType)))
+        settings.rootTag, settings.arrayItemTag, settings.dateFormatter,
+        TypeHintSettings(settings.typeHintSettings.enums, classTypeHints), 
+        settings.classLoader, settings.opaqueDataSettings, 
+        settings.reifiableSettings))
   }
 
   /** Convenience method for fromXml[Iterator[A]]("...").get 
@@ -299,23 +198,19 @@ package object xml {
     }
   }
 
-  /** Converts given value to an RFC 4627 compatible XML string
+  /** Converts given value to an XML string
+    * 
+    * See [[scalafy.util.json]] for a list of examples (substitute
+    * toJson with toXml)
     *
-    * Typically the value passed will be a List of values or a Map of
-    * values. However, this method will also support passing a primitive 
-    *
-    * Examples:
-    * {{{
-    * toXml(List(1,2,3))      // "[1,2,3]"
-    * toXml(Map("foo" -> 1))  // "{\"foo\":1}"
-    * }}}
-    *
-    * @param value values (typically List or Map)
-    * @param pretty print optional pretty printing 
     * @return string XML data
     */
   def toXml(x: Any)(implicit settings: XmlSettings): String = 
     XmlParser.toXml(x, settings)
+
+  /** toXml using Writer */
+  def toXml(writer: Writer, x: Any)(implicit settings: XmlSettings): Unit = 
+    XmlParser.toXml(writer, x, settings)
 
   /** toXml with explicit pretty printing settings */
   def toXml(x: Any, prettyPrint: Boolean, indent: Int = 2)(
@@ -324,7 +219,8 @@ package object xml {
     XmlParser.toXml(x, 
       XmlSettings(settings.fieldCasing, 
         PrettyPrintSettings(prettyPrint, indent),
-        settings.rootTag, settings.arrayItemTag,
+        settings.rootTag, settings.arrayItemTag, settings.dateFormatter,
+        settings.typeHintSettings, settings.classLoader, 
         settings.opaqueDataSettings, settings.reifiableSettings))
 
   /** toXml with explicit casing setting */
@@ -333,26 +229,21 @@ package object xml {
   ): String = 
     XmlParser.toXml(x, 
       XmlSettings(fieldCasing, settings.prettyPrintSettings, settings.rootTag,
-        settings.arrayItemTag, settings.opaqueDataSettings, 
-        settings.reifiableSettings))
-
-  /** toXml with explicit meta/data tags setting */
-  def toXml(x: Any, metaTags: Seq[Symbol], dataTags: Seq[Symbol])(
-    implicit settings: XmlSettings
-  ): String = 
-    XmlParser.toXml(x, 
-      XmlSettings(settings.fieldCasing, settings.prettyPrintSettings, 
-        settings.rootTag, settings.arrayItemTag, settings.opaqueDataSettings,
-        settings.reifiableSettings))
+        settings.arrayItemTag, settings.dateFormatter, 
+        settings.typeHintSettings, settings.classLoader,
+        settings.opaqueDataSettings, settings.reifiableSettings))
 
   /** toXml with explicit casing and pretty print settings */
   def toXml(
     x: Any, fieldCasing: Casing, prettyPrint: Boolean, indent: Int
+  )(
+    implicit settings: XmlSettings
   ): String = 
     XmlParser.toXml(x, 
       XmlSettings(fieldCasing, PrettyPrintSettings(prettyPrint, indent), 
-        xmlSettings.rootTag, xmlSettings.arrayItemTag, 
-        xmlSettings.opaqueDataSettings, xmlSettings.reifiableSettings))
+        settings.rootTag, settings.arrayItemTag, 
+        settings.dateFormatter, settings.typeHintSettings, settings.classLoader,
+        settings.opaqueDataSettings, settings.reifiableSettings))
 
 
   ///////////////////////////////////////////////////////////////////////////
@@ -363,7 +254,7 @@ package object xml {
     def unapply(xml: String)(
       implicit settings: XmlSettings 
     ): Option[Any] = {
-      XmlParser.fromXmlOption(xml, settings)(manifest[Any])
+      fromXml(xml)(manifest[Any], settings)
     }
   }
 
@@ -375,7 +266,7 @@ package object xml {
     def unapply(xml: Iterable[Char])(
       implicit settings: XmlSettings 
     ): Option[Any] = {
-      XmlParser.fromXmlOption(xml, settings)(manifest[Any])
+      fromXml(xml)(manifest[Any], settings)
     }
   }
 
@@ -400,8 +291,8 @@ package object xml {
       * @return type from apply operation or current type if conversion fails
       */
     def withXml(xml: Iterable[Char])(op: (A, A) => A): A = {
-      XmlParser.fromXmlOption(xml, settings)(m) match {
-        case Some(v) => op(cur, v) 
+      XmlParser.fromXml(xml, settings)(m) match {
+        case Right(v) => op(cur, v) 
         case _ => cur
       }
     }
@@ -410,11 +301,12 @@ package object xml {
     def withXml(
       xml: Iterable[Char], fieldCasing: Casing
     )(op: (A,A) => A): A = {
-      XmlParser.fromXmlOption(xml, XmlSettings(fieldCasing, 
+      XmlParser.fromXml(xml, XmlSettings(fieldCasing, 
           settings.prettyPrintSettings, settings.rootTag, 
-          settings.arrayItemTag, settings.opaqueDataSettings, 
-          settings.reifiableSettings))(m) match {
-        case Some(v) => op(cur, v) 
+          settings.arrayItemTag, settings.dateFormatter, 
+          settings.typeHintSettings, settings.classLoader,
+          settings.opaqueDataSettings, settings.reifiableSettings))(m) match {
+        case Right(v) => op(cur, v) 
         case _ => cur
       }
     }

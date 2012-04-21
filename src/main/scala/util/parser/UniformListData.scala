@@ -45,17 +45,17 @@ private[parser] class UniformListData[A](
 
   override protected def internalAdd(item: Any): Option[String] = {
     item match {
-      case x: String => obj :+= x
-      case x: Symbol => obj :+= x
-      case x: Short => obj :+= x
-      case x: Int => obj :+= x
-      case x: Long => obj :+= x
-      case x: Float => obj :+= x
-      case x: Double => obj :+= x
-      case x: Boolean => obj :+= x
-      case x: Char => obj :+= x
-      case x: Byte => obj :+= x
-      case x: UniformData[_] => obj :+= x.asInstanceOf[UniformData[Any]]
+      case x: String => obj += x
+      case x: Symbol => obj += x
+      case x: Short => obj += x
+      case x: Int => obj += x
+      case x: Long => obj += x
+      case x: Float => obj += x
+      case x: Double => obj += x
+      case x: Boolean => obj += x
+      case x: Char => obj += x
+      case x: Byte => obj += x
+      case x: UniformData[_] => obj += x.asInstanceOf[UniformData[Any]]
       case x => 
         return Some("type mismatch: expecting uniform data not " + x.getClass)
     }
@@ -63,6 +63,6 @@ private[parser] class UniformListData[A](
     None
   }
 
-  override protected def createManifestUsing[A : Manifest]: Manifest[_] =
-    manifest[UniformList[A]]
+  override protected def createManifestUsing[T : Manifest]: Manifest[_] =
+    manifest[UniformList[T]]
 }

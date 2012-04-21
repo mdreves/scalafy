@@ -19,10 +19,6 @@ package scalafy.collection.uniform
 
 import scalafy.util.toClass
 
-//////////////////////////////////////////////////////////////////////////////
-// UniformList Helpers
-//////////////////////////////////////////////////////////////////////////////
-
 /** Wrapped implementation of List[A] that only allows uniform types.
   *
   * The createList method needs to be overridden by the subclass in order to
@@ -205,7 +201,7 @@ private[uniform] trait UniformListLike[A] extends Product {
   private[uniform] def normalize[A](xs: A*) = UniformList.normalize(xs : _*)
 }
 
-/** Wrapped implementation of Map.apply.
+/** Wrapped implementation of companion List object for use with UniformList
   *
   * Only allows operations with uniform types
   */

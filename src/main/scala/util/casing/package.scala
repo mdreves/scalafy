@@ -17,7 +17,7 @@
   */
 package scalafy.util
 
-/** Contains objects used for case matching and conversion.
+/** Utils for case matching and conversion.
   *
   * The following is a summary of features:
   * {{{
@@ -52,7 +52,7 @@ package scalafy.util
 package object casing {
 
   ///////////////////////////////////////////////////////////////////////////
-  // Implicits
+  // Pimps 
   ///////////////////////////////////////////////////////////////////////////
 
   final class IterableCaseConverter(val iter: Iterable[Char]) {

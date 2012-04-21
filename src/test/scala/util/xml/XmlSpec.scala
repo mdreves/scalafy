@@ -150,6 +150,29 @@ object XmlSpec extends Specification {
       fromXml[Byte](wrapXml("1234")).mustEqual(None)
     }
 
+    "support extracting XML as BigInt/BigDecimal" in {
+      fromXml[BigInt](wrapXml("123331234123411233"))
+        .mustEqual(Some(BigInt("123331234123411233")))
+      fromXml[BigDecimal](wrapXml("123331234123411233"))
+        .mustEqual(Some(BigDecimal("123331234123411233")))
+      fromXml[Map[String,BigInt]](wrapXml(
+        "<foo>123331234123411233</foo>"))
+        .mustEqual(Some(Map("foo" -> BigInt("123331234123411233"))))
+    }
+
+    "support extracting XML as Dates and Timezones" in {
+      val formatter = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+      fromXml[java.util.Date](wrapXml("2012-01-01T20:01:01Z")).mustEqual(
+        Some(formatter.parse("2012-01-01T20:01:01Z")))
+      fromXml[List[java.util.Date]](wrapXml(
+          "<item>2012-01-01T20:01:01Z</item><item>2012-02-01T23:11:01Z</item>"))
+        .mustEqual(
+          Some(List(formatter.parse("2012-01-01T20:01:01Z"),
+            formatter.parse("2012-02-01T23:11:01Z"))))
+      fromXml[java.util.TimeZone](wrapXml("PST")).mustEqual(
+        Some(java.util.TimeZone.getTimeZone("PST")))
+    }
+
     "support extracting XML as null" in {
       fromXml[Any](<result xsi:nil="true"/>.toString).mustEqual(Some(null))
       fromXml[String](<result xsi:nil="true"/>.toString).mustEqual(Some(null))
@@ -163,6 +186,28 @@ object XmlSpec extends Specification {
       fromXml[Long](<result xsi:nil="true"/>.toString).mustEqual(None)
       fromXml[Double](<result xsi:nil="true"/>.toString).mustEqual(None)
       fromXml[Boolean](<result xsi:nil="true"/>.toString).mustEqual(None) 
+    }
+
+    "support extracting XML with Option types" in {
+      fromXml[Option[String]](wrapXml("")).mustEqual(Some(None))
+      fromXml[Option[String]](wrapXml("foo")).mustEqual(Some(Some("foo")))
+      fromXml[Option[Int]](wrapXml("")).mustEqual(Some(None))
+      fromXml[Option[Int]](wrapXml("123")).mustEqual(Some(Some(123)))
+      fromXml[Option[List[String]]](wrapXml("")).mustEqual(Some(None))
+      fromXml[Option[List[Int]]](wrapXml(mkList(List(1,2)))).mustEqual(
+        Some(Some(List(1,2))))
+      fromXml[List[Option[Int]]](
+          wrapXml(mkList(List(1,2))+"<item xsi:nil=\"true\"/>"))
+        .mustEqual(Some(List(Some(1),Some(2),None)))
+      fromXml[Map[String, Option[String]]](
+          wrapXml(mkMap(Map("foo" -> 2, "bar" -> null))))
+        .mustEqual(
+          Some(Map("foo" -> Some("2"), "bar" -> None)))
+      // Requires type hints
+      fromXml[Test12](wrapXml(Test12("foo", None).toXml), TestData.typeHints)
+        .mustEqual(Some(Test12("foo", None)))
+      fromXml[Test12](wrapXml(Test12("foo", Some(1)).toXml), TestData.typeHints)
+        .mustEqual(Some(Test12("foo", Some(1))))
     }
 
     "support extracting XML as List of primitives" in {
@@ -492,6 +537,9 @@ object XmlSpec extends Specification {
         PrettyPrintSettings(false, 2),
         "result",
         "item",
+        new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"),        
+        TypeHintSettings(),
+        null, 
         OpaqueDataSettings(false),
         ReifiableSettings(true)
       )
@@ -532,6 +580,9 @@ object XmlSpec extends Specification {
         PrettyPrintSettings(false, 2),
         "result",
         "item",
+        new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"), 
+        TypeHintSettings(),
+        null,
         OpaqueDataSettings(false),
         ReifiableSettings(false)
       )
@@ -544,6 +595,9 @@ object XmlSpec extends Specification {
         PrettyPrintSettings(false, 2),
         "result",
         "item",
+        new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"), 
+        TypeHintSettings(),
+        null,
         OpaqueDataSettings(true),
         ReifiableSettings(false)
       )
@@ -567,6 +621,9 @@ object XmlSpec extends Specification {
         PrettyPrintSettings(false, 2),
         "result",
         "item",
+        new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'"), 
+        TypeHintSettings(),
+        null,
         OpaqueDataSettings(false),
         ReifiableSettings(false)
       )
@@ -595,19 +652,23 @@ object XmlSpec extends Specification {
     }
 
     "support extracting XML using reflection with embedded List types" in {
-      // Only Lists of type String, Int (Long), Double, and Boolean possible
-      fromXml[Test3](wrapXml(Test3(List("foo", "bar")).toXml)).mustEqual(
+      fromXml[Test3](wrapXml(Test3(List("foo", "bar")).toXml), 
+          TestData.typeHints).mustEqual(
         Some(Test3(List("foo", "bar"))))
-      fromXml[Test4](wrapXml(Test4(List("foo", "bar"), List(1, 2)).toXml))
+      fromXml[Test4](wrapXml(Test4(List("foo", "bar"), List(1, 2)).toXml),
+          TestData.typeHints)
         .mustEqual(Some(Test4(List("foo", "bar"), List(1, 2))))
-      // Test5 won't work due to type erasure... (returns Map not Test1)
+      fromXml[Test5](wrapXml(Test5(List(Test1("foo"),Test1("bar"))).toXml),
+          TestData.typeHints)
+        .mustEqual(Some(Test5(List(Test1("foo"),Test1("bar")))))
     }
 
     "support extracting XML using reflection with embedded Map types" in {
-      // Only Maps of String to String, Int (Long), Double, and Boolean possible
-      fromXml[Test6](wrapXml(Test6(Map("foo" -> "bar")).toXml))
+      fromXml[Test6](wrapXml(Test6(Map("foo" -> "bar")).toXml), 
+          TestData.typeHints)
         .mustEqual(Some(Test6(Map("foo" -> "bar"))))
-      fromXml[Test7](wrapXml(Test7(Map("foo" -> "bar"), Map("bat" -> 2)).toXml))
+      fromXml[Test7](wrapXml(Test7(Map("foo" -> "bar"), Map("bat" -> 2)).toXml),
+          TestData.typeHints)
         .mustEqual(Some(Test7(Map("foo" -> "bar"), Map("bat" -> 2))))
     }
 
@@ -634,6 +695,20 @@ object XmlSpec extends Specification {
       val test11 = new Test11("foo")
       test11.b = true
       fromXml[Test11](wrapXml(test11.toXml)).mustEqual(Some(test11))
+    }
+
+    "support extracting JSON as Enumerations/singletons" in {
+      /* Doesn't work in Specs, works outside
+      case object Foo
+      fromXml[Foo.type](wrapXml("Foo")).mustEqual(Some(Foo)) */
+
+      fromXml[List[WeekDay.Value]](wrapXml(mkList(List("Mon","Wed"))),
+          List(WeekDay))
+        .mustEqual(Some(List(WeekDay.Mon, WeekDay.Wed)))
+
+      val t = Test13(WeekDay.Mon)
+      fromXml[Test13](wrapXml(mkMap(Map("d" -> "Mon"))), TestData.typeHints)
+        .mustEqual(Some(t))
     }
 
     "support lazy conversion to XML using iterable/iterator" in {
@@ -823,6 +898,12 @@ object XmlSpec extends Specification {
       toXml(false).mustEqual(wrapXml("false"))
       toXml('a').mustEqual(wrapXml("a"))
       toXml(3: Byte).mustEqual(wrapXml("3"))
+      toXml(BigInt("12341235123312")).mustEqual(wrapXml("12341235123312"))
+      toXml(BigDecimal("12341235123312")).mustEqual(wrapXml("12341235123312"))
+      val formatter = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'")
+      toXml(formatter.parse("2012-01-01T20:01:01Z")).mustEqual(
+        wrapXml("2012-01-01T20:01:01Z"))
+      toXml(java.util.TimeZone.getTimeZone("PST")).mustEqual(wrapXml("PST"))
     }
 
     "support proper encoding of string data" in {
@@ -853,7 +934,21 @@ object XmlSpec extends Specification {
         wrapXml(mkMap(Map("foo" -> Map("bar" -> 3)))))
     }
 
-   "support conversion using reflection" in {
+    "support conversion using Option types" in {
+      toXml(None).mustEqual("<result xsi:nil=\"true\"/>")
+      toXml(Some("foo")).mustEqual(wrapXml("foo"))
+      toXml(Some(123)).mustEqual(wrapXml("123"))
+      toXml(Some(List(1,2))).mustEqual(wrapXml(mkList(List(1,2))))
+      toXml(List(Some(1),Some(2),None)).mustEqual(
+        wrapXml(mkList(List(1,2))+"<item xsi:nil=\"true\"/>"))
+      toXml(Map("foo" -> Some(2), "bar" -> None)).mustEqual(
+        wrapXml(mkMap(Map("foo" -> 2, "bar" -> null))))
+      toXml(Test12("foo", None)).mustEqual(wrapXml(Test12("foo", None).toXml))
+      toXml(Test12("foo", Some(1))).mustEqual(
+        wrapXml(Test12("foo", Some(1)).toXml))
+    }
+
+    "support conversion using reflection" in {
       toXml(Test1("foo")).mustEqual(wrapXml(Test1("foo").toXml))
       toXml(Test2("bar", 1, 2, 3, 1.0f, 2.0, 'a', true, 3)).mustEqual(
         wrapXml(Test2("bar", 1, 2, 3, 1.0f, 2.0, 'a', true, 3).toXml))
@@ -867,6 +962,14 @@ object XmlSpec extends Specification {
     "support conversion using Maps of objects from reflection" in {
       toXml(Map(10 -> Test1("foo"), 15 -> Test1("bar"))).mustEqual(
         wrapXml(mkMap(Map(10 -> Test1("foo").toXml, 15 -> Test1("bar").toXml))))
+    }
+
+    "support conversion of Enumerations/singletons" in {
+      case object Foo
+      toXml(Foo).mustEqual(wrapXml("Foo"))
+      toXml(List(WeekDay.Mon, WeekDay.Wed)).mustEqual(
+        wrapXml(mkList(List("Mon","Wed"))))
+      toXml(Test13(WeekDay.Mon)).mustEqual(wrapXml(mkMap(Map("d" -> "Mon"))))
     }
 
     "support conversion using reflection with embedded List types" in {
@@ -1007,7 +1110,7 @@ object XmlSpec extends Specification {
       toXml(collection.mutable.OpenHashMap("name1" -> 1, "name2" -> 2))
         .mustEqual(wrapXml(mkMap(Map("name1" -> 1, "name2" -> 2))))
       toXml(collection.mutable.ListMap("name1" -> 1, "name2" -> 2))
-        .mustEqual(wrapXml(mkMap(Map("name1" -> 1, "name2" -> 2))))
+        .mustEqual(wrapXml(mkMap(Map("name2" -> 2, "name1" -> 1))))
     }
 
     "support field casing conversion" in {
@@ -1203,5 +1306,38 @@ object XmlSpec extends Specification {
       <l>{l}</l>
       <b>{b}</b>.mkString
     }
+  }
+  case class Test12(val s: String, val i: Option[Int]) {
+    def toXml(): String = {
+      if (i == None) {
+        "<s>" + s.toString + "</s>" +
+        "<i xsi:nil=\"true\"/>"
+      } else {
+        <s>{s}</s>
+        <i>{i.get}</i>.mkString
+      }
+    }
+  }
+
+  trait Singleton
+  case object CaseObject extends Singleton
+  object WeekDay extends Enumeration {
+    val Mon, Tue, Wed, Thu, Fri, Sat, Sun = Value
+  }
+  case class Test13(d: WeekDay.Value)
+
+  // Type hints for test classes
+  object TestData {
+    val typeHints = TypeHintSettings(
+      List[Enumeration](WeekDay),
+      Map[Class[_], Map[Symbol, Manifest[_]]](
+        classOf[Test3] -> Map('xs -> manifest[List[String]]),
+        classOf[Test4] -> Map('xs1 -> manifest[List[String]], 
+            'xs2 -> manifest[List[Int]]),
+        classOf[Test5] -> Map('xs -> manifest[List[Test1]]),
+        classOf[Test6] -> Map('xm -> manifest[Map[String,String]]),
+        classOf[Test7] -> Map('xm1 -> manifest[Map[String,String]], 
+            'xm2 -> manifest[Map[String,Int]]),
+        classOf[Test12] -> Map('i -> manifest[Option[Int]]) ))
   }
 }

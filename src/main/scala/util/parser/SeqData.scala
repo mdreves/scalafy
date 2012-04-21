@@ -33,6 +33,9 @@ private[parser] class SeqData[A](
       if (objType.erasure == classOf[List[_]] || 
           objType.erasure == classOf[::[_]] || 
           objType.erasure == classOf[Seq[_]] || 
+          objType.erasure == classOf[Stream[_]] || 
+          objType.erasure == classOf[Iterator[_]] || 
+          objType.erasure == classOf[Iterable[_]] || 
           objType.erasure == classOf[collection.immutable.LinearSeq[_]]) {
         classOf[collection.mutable.ListBuffer[_]]
       } else objType.erasure
@@ -56,6 +59,12 @@ private[parser] class SeqData[A](
       } else if (objType.erasure == 
           classOf[collection.immutable.LinearSeq[_]]) {
         obj.asInstanceOf[collection.mutable.ListBuffer[_]].toSeq
+      } else if (objType.erasure == classOf[Stream[_]]) {
+        obj.asInstanceOf[collection.mutable.ListBuffer[_]].toStream
+      } else if (objType.erasure == classOf[Iterator[_]]) {
+        obj.asInstanceOf[collection.mutable.ListBuffer[_]].toIterator
+      } else if (objType.erasure == classOf[Iterable[_]]) {
+        obj.asInstanceOf[collection.mutable.ListBuffer[_]].toIterable
       } else obj
 
     Reifiable(getManifest(), result)(settings.reifiableSettings)
@@ -74,8 +83,8 @@ private[parser] class SeqData[A](
     }
   }
 
-  override protected def createManifestUsing[A : Manifest]: Manifest[_] = {
-    createSeqManifest(objType.erasure)(manifest[A]) match {
+  override protected def createManifestUsing[T : Manifest]: Manifest[_] = {
+    createSeqManifest(objType.erasure)(manifest[T]) match {
       case Right(m) => m
       case Left(l) => throw new Error(l)
     }

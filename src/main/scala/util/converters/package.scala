@@ -98,11 +98,12 @@ import scalafy.types.meta._
   *   true                        // best effort conversion (default is false)
   *   OpaqueDataSettings(false)   // store opaque data (default is false)
   * )
+  * }}}
   */
 package object converters {
 
   ///////////////////////////////////////////////////////////////////////////
-  // vals and implicits 
+  // Settings 
   ///////////////////////////////////////////////////////////////////////////
 
   /** Conversion settings of use with implicit params */

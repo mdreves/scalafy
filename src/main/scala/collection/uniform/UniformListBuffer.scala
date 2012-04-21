@@ -25,7 +25,25 @@ trait UniformListBuffer[A] {
 
   // Wrapped container
   private[uniform] val buffer: ListBuffer[A]
+  private[uniform] val m: Manifest[A]
 
+  def += [A1](elem: A1)(
+    implicit m: Manifest[A1], ev: UniformType[A1]
+  ): UniformListBuffer.this.type = {
+    if (m == manifest[A1] || m == manifest[Any]) 
+      buffer.+=(normalize(elem.asInstanceOf[A])(0))
+    else throw new Error("Invalid type: " + manifest[A1])
+    this
+  }
+
+  def -= [A1](elem: A1)(
+    implicit m: Manifest[A1], ev: UniformType[A1]
+  ): UniformListBuffer.this.type = {
+    if (m == manifest[A1] || m == manifest[Any]) 
+      buffer.-=(normalize(elem.asInstanceOf[A])(0))
+    else throw new Error("Invalid type: " + manifest[A1])
+    this
+  }
 
   def ++ [A1 : UniformType](
     xs: GenTraversableOnce[A1]
@@ -64,15 +82,16 @@ object UniformListBuffer {
 
   import scala.collection.mutable.ListBuffer
 
-  def apply[A](): UniformListBuffer[A] = createListBuffer(ListBuffer[A]())
+  def apply[A: Manifest](): UniformListBuffer[A] =
+    createListBuffer(ListBuffer[A]())
 
   // Helpers
 
-  private[uniform] def createListBuffer[A1](
+  private[uniform] def createListBuffer[A1 : Manifest](
     xs: ListBuffer[A1]
   ): UniformListBuffer[A1] =
     new UniformListBuffer[A1] { 
-      val value = null 
-      val buffer = xs.asInstanceOf[ListBuffer[A1]] 
+      val buffer = xs.asInstanceOf[ListBuffer[A1]]
+      val m = manifest[A1]
     }
 }  

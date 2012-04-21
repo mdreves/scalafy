@@ -17,13 +17,12 @@
   */
 package scalafy.collection.uniform
 
+import java.util.Date
+import java.util.TimeZone
+
 import scalafy.types.meta._
 import scalafy.util._
 import scalafy.util.converters._
-
-///////////////////////////////////////////////////////////////////////////
-// UniformData parser implementation 
-///////////////////////////////////////////////////////////////////////////
 
 /** Uniform data parser */
 private[uniform] object UniformDataParser {
@@ -110,6 +109,14 @@ private[uniform] object UniformDataParser {
           Right(v.value.asInstanceOf[A])
         case v: UniformByte if (manifest[A] == manifest[Byte]) =>
           Right(v.value.asInstanceOf[A])
+        case v: UniformBigInt if (manifest[A] == manifest[BigInt]) =>
+          Right(v.value.asInstanceOf[A])
+        case v: UniformBigDecimal if (manifest[A] == manifest[BigDecimal]) =>
+          Right(v.value.asInstanceOf[A])
+        case v: UniformDate if (manifest[A] == manifest[Date]) =>
+          Right(v.value.asInstanceOf[A])
+        case v: UniformTimeZone if (manifest[A] == manifest[TimeZone]) =>
+          Right(v.value.asInstanceOf[A])
         case _ => 
           Left(errorPrefix + "conversion from " + u.getClass() + 
             " to " + manifest[A] + "not possible")
@@ -155,6 +162,10 @@ private[uniform] object UniformDataParser {
     case b: Boolean => UniformBoolean(b)
     case c: Char => UniformChar(c)
     case b: Byte => UniformByte(b)
+    case bi: BigInt => UniformBigInt(bi)
+    case bd: BigDecimal => UniformBigDecimal(bd)
+    case d: Date => UniformDate(d)
+    case tz: TimeZone => UniformTimeZone(tz)
     case x => 
       val value = toUniformDataValue(x, settings)
      
@@ -198,6 +209,10 @@ private[uniform] object UniformDataParser {
     case b: Boolean => b
     case c: Char => c
     case b: Byte => b
+    case bi: BigInt => bi
+    case bd: BigDecimal => bd
+    case d: Date => d
+    case tz: TimeZone => tz 
     case x =>
 
       // Map

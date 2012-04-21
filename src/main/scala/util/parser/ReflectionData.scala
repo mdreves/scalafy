@@ -26,129 +26,263 @@ private[parser] class ReflectionData[A](
   settings: ParserSettings
 ) extends ObjectData[A, Symbol](reflectionType, manifest[Symbol], settings) {
 
-  val fieldTypes = ReflectionData.getFieldTypes(objType.erasure) 
-  var fieldValues = collection.mutable.LinkedHashMap[Symbol,Any]()  
+  var fieldValues = 
+    new Array[AnyRef](ReflectionData.getFieldCount(getClass(objType), settings))
 
   var unusedData = Map[Symbol,Any]()  // track unused data
 
   override protected def isContainerUpgradeable(): Boolean = false 
   
   override def getItemType(name: Any): Manifest[_] = {
-    val fieldType = fieldTypes.get(name.asInstanceOf[Symbol])
-    if (fieldType.isEmpty) {
-      // Not a type we know, return Any for now, we will catch the
-      // error later when we try to convert to object
-      manifest[Any]
-    } else {
-      toManifest(fieldType.get)
+    ReflectionData.getFieldType(
+        getClass(objType), name.asInstanceOf[Symbol], settings) match {
+      case Some(mf) => mf   // may be null if typeHints needed 
+      case None => manifest[Any] // not a type we know, deal with error at toObj
     }
   }
 
   def getObj(): Either[String, A] = {
-    // Find constructors with param counts to our value count
-    val ctors = objType.erasure.getDeclaredConstructors.filter {
-      ctor => ctor.getParameterTypes.size <= fieldValues.size 
-    }
-    if (ctors.isEmpty) {
-      Left("missing fields: " +
-          fieldTypes.keySet.diff(fieldValues.keySet).mkString(", ") + 
-          " for " + objType) 
-    } else {
-      val ctor = if (ctors.size == 1) ctors(0) else {
-        // Find ctor matching our args
-        val ctorOpt = ctors.find { ctor => 
-          val matchingTypes = fieldValues.keys.map { 
-            name => fieldTypes.get(name).get
-          }
-          ctor.getParameterTypes.zip(matchingTypes).forall {
-            pair => pair._1 == pair._2
-          }
-        }
-        if (ctorOpt.isEmpty) { 
-          return Left("no matching constructor for: " + objType)
-        } else {
-          ctorOpt.get
-        }
-      }
-
-      try {
-        val numParams = ctor.getParameterTypes.size
-
-        val newObj = ctor.newInstance(
-            toRefArray(fieldValues.values.take(numParams)) : _*)
-         
-        // Set any fields not used during construction that were passed
-        for ((name, value) <- fieldValues.drop(numParams)) {
-          // Need to find method with name_$eq
-          val method = objType.erasure.getDeclaredMethods.find {
-            m => m.getName == (name.name + "_$eq")
-          }
-          if (!method.isEmpty) { 
-            method.get.invoke(newObj, toRefArray(Seq(value)) : _*)
-          }
-        }
-
+    // Fast path:
+    //   The assumption is that 99% of the objects will have a single
+    //   constructor matching the paramters. We will just blindly attempt
+    //   to do the conversion with what we have. If it throws an  
+    //   exception, then take slow path
+    ReflectionData.getSingleConstructor(getClass(objType)) match {
+      case Some(ctor) => try {
+        val newObj = ctor.newInstance(fieldValues: _*).asInstanceOf[A]
+      
         if (settings.opaqueDataSettings.enabled && unusedData.size > 0 &&
             newObj.isInstanceOf[AnyRef]) {
           OpaqueData.add(newObj.asInstanceOf[AnyRef], unusedData)(
             settings.opaqueDataSettings)
         }
 
-        Right(newObj.asInstanceOf[A])
+        return Right(newObj)
       } catch {
-        case e => Left("object construction failed: " + e.getMessage())
+        case e => {} // go to slow path
       }
+
+      case None => {} // go to slow path
+    }
+
+    // Slow path:
+
+    // Create list of actual fields, types, and values used 
+    val fieldNames = ReflectionData.getFieldNames(getClass(objType), settings)
+    var fieldsUsed = collection.mutable.ArrayBuffer[Symbol]()
+    var typesUsed = collection.mutable.ArrayBuffer[Class[_]]()
+    var valuesUsed = collection.mutable.ArrayBuffer[AnyRef]()
+    for (i <- 0 until fieldValues.size) {
+      val t = ReflectionData.getFieldType(
+          getClass(objType), fieldNames(i), settings).get
+      val v = fieldValues(i)
+      if (v == null) {
+        if (t.erasure == classOf[Option[_]]) {
+          fieldsUsed += fieldNames(i)
+          typesUsed += t.erasure
+          valuesUsed += None
+        }
+      } else {
+        fieldsUsed += fieldNames(i)
+        typesUsed += t.erasure
+        valuesUsed += v
+      }
+    }
+
+    // Find constructors with param counts less than or equal to value count
+    val ctors = getClass(objType).getDeclaredConstructors.filter {
+      ctor => ctor.getParameterTypes.size <= valuesUsed.size 
+    }
+
+    if (ctors.isEmpty) {
+      val missing = ReflectionData.getFieldNames(
+          getClass(objType), settings).filter { f =>
+        fieldValues(ReflectionData.getFieldOffset(
+            getClass(objType), f, settings)) != null 
+      }
+      return Left("missing fields: " + missing.mkString(", ") + 
+        " for " + objType) 
+    }
+
+    val ctor = if (ctors.size == 1) ctors(0) else {
+      // Find ctor matching our args
+      val ctorOpt = ctors.find { ctor => 
+        ctor.getParameterTypes.zip(typesUsed) forall { pair =>
+          pair._1 == pair._2
+        }
+      }
+      if (ctorOpt.isEmpty) {
+        return Left("no matching constructor for: " + objType)
+      } else {
+        ctorOpt.get
+      }
+    }
+
+    try {
+      val numParams = ctor.getParameterTypes.size
+
+      val newObj = ctor.newInstance(valuesUsed.take(numParams) : _*)
+       
+      // Set any fields not used during construction that were passed
+      for (i <- numParams until valuesUsed.size) {
+        // Need to find method with name_$eq
+        val method = getClass(objType).getDeclaredMethods.find {
+          m => m.getName == (fieldsUsed(i).name + "_$eq")
+        }
+
+        if (!method.isEmpty) { 
+          method.get.invoke(newObj, Seq(valuesUsed(i)) : _*)
+        }
+      }
+
+      if (settings.opaqueDataSettings.enabled && unusedData.size > 0 &&
+          newObj.isInstanceOf[AnyRef]) {
+        OpaqueData.add(newObj.asInstanceOf[AnyRef], unusedData)(
+          settings.opaqueDataSettings)
+      }
+
+      Right(newObj.asInstanceOf[A])
+    } catch {
+      case e => Left("object construction failed: " + e.getMessage())
     }
   }
 
   override protected def internalAdd(
       name: Any, item: Any): Option[String] = {
 
+    val sym = name.asInstanceOf[Symbol]
+
     // Validate type 
-    val fieldType = fieldTypes.get(name.asInstanceOf[Symbol])
-    
-    if (fieldType.isEmpty) {
-      if (settings.opaqueDataSettings.enabled) {
-        unusedData += (name.asInstanceOf[Symbol] -> item)
-      }
-    } else {
-   
-      if (item == null) {
-        if (!scalafy.util.isNullAllowed(fieldType.get)) {
-          return Some("type mismatch: expecting "+fieldType.get + " not null")
+    ReflectionData.getFieldType(getClass(objType), sym, settings) match {
+      case None =>
+        if (settings.opaqueDataSettings.enabled) unusedData += (sym -> item)
+  
+      case Some(t) =>
+        if (item == null) {
+          if (!scalafy.util.isNullAllowed(t.erasure)) {
+            return Some("type mismatch: expecting "+ t + " not null")
+          }
+
+        } else if (!t.erasure.isAssignableFrom(toClass(item))) {
+          return Some("type mismatch: expecting " + t + " not " + toClass(item))
         }
 
-      } else if (!fieldType.get.isAssignableFrom(toClass(item))) {
-        return Some("type mismatch: expecting " + fieldType.get + 
-            " not " + toClass(item))
-      }
-
-      // Add to our container
-      fieldValues += (name.asInstanceOf[Symbol] -> item)
+        // Add to our container
+        val offset = ReflectionData.getFieldOffset(
+            getClass(objType), sym, settings)
+        fieldValues(offset) = toRef(item)
     }
 
     None
   }
 
-  /** Creates manifest that goes with class */
-  private def toManifest(clazz: Class[_]): Manifest[_] = {
-    if (isPrimitiveType(clazz)) toPrimitiveManifest(clazz).get
-    else if (isSeqType(clazz)) createSeqManifest[Any](clazz).right.get
-    else if (isTupleType(clazz)) 
-      createTupleManifest(manifest[Any], getTupleCount(clazz)).right.get
-    else if (isMapType(clazz)) createMapManifest(clazz).right.get
-    else new Manifest[ReflectionData[_]]() { 
-      def erasure = clazz
-    }
+  protected def getClass(mf: Manifest[_]): Class[_] = {
+    if (settings.classLoader == null) mf.erasure
+    else settings.classLoader.loadClass(mf.erasure.getName)
   }
 }
 
 private[parser] object ReflectionData {
-  def getFieldTypes(clazz: java.lang.Class[_]) = {
-    var fieldTypes = Map[Symbol, java.lang.Class[_]]()
-    for (f <- clazz.getDeclaredFields) {
-      fieldTypes += (Symbol(f.getName()) -> f.getType()) 
+
+  private val cache = new collection.mutable.WeakHashMap[
+      Class[_], Map[Symbol, (Int, Manifest[_])]]()
+
+  def getFieldCount(clazz: Class[_], settings: ParserSettings): Int = 
+    getFieldMapping(clazz, settings).size
+
+  def getFieldOffset(
+    clazz: Class[_], field: Symbol, settings: ParserSettings
+  ): Int = {
+    getFieldMapping(clazz, settings).get(field) match {
+      case Some(pair) => pair._1
+      case None => -1
     }
-    fieldTypes
+  }
+
+  def getFieldType(
+    clazz: Class[_], field: Symbol, settings: ParserSettings
+  ): Option[Manifest[_]] = {
+    getFieldMapping(clazz, settings).get(field) match {
+      case Some(pair) => Some(pair._2)
+      case None => None 
+    }
+  }
+
+  def getFieldNames(
+    clazz: Class[_], settings: ParserSettings
+  ): Array[Symbol] = {
+    val mapping = getFieldMapping(clazz, settings)
+    val result = new Array[Symbol](mapping.size)
+    mapping.foreach { kv => result(kv._2._1) = kv._1 }
+    result
+  }
+
+  /** Gets single constructor for class
+    *
+    * If one constructor exists that is returned, if an empty constructor
+    * along with only one other consturctor exists the other constructor
+    * is returned else None is returned.
+    */
+  def getSingleConstructor(
+    clazz: Class[_]
+  ): Option[java.lang.reflect.Constructor[_]] = {
+    val ctors = clazz.getDeclaredConstructors
+    if (ctors.size == 1) Some(ctors(0)) 
+    else if (ctors.size == 2) {
+      if (ctors(0).getParameterTypes.size == 0) Some(ctors(1))
+      else if (ctors(1).getParameterTypes.size == 0) Some(ctors(0))
+      else None
+    } else None
+  }
+
+  private def getFieldMapping(
+    clazz: Class[_], settings: ParserSettings
+  ): Map[Symbol, (Int, Manifest[_])] = {
+    cache.get(clazz) match {
+      case Some(fieldMapping) => fieldMapping 
+      case None => 
+        var fieldMapping = Map[Symbol, (Int, Manifest[_])]()
+        var offset = 0
+        for (f <- clazz.getDeclaredFields) {
+          val sym = Symbol(f.getName())
+          toManifest(clazz, f.getType(), sym, settings) match {
+            case Some(mf) =>
+              fieldMapping += (sym -> (offset -> mf))
+            case None => // Missing information (need typeHints)
+              fieldMapping += (sym -> (offset -> null))
+          }
+          offset += 1
+        }
+        cache.put(clazz, fieldMapping)
+        fieldMapping
+    }
+  }
+
+  /** Creates manifest that goes with class */
+  private def toManifest(
+    parent: Class[_], clazz: Class[_], sym: Symbol, settings: ParserSettings
+  ): Option[Manifest[_]] = {
+
+    // Helper to create manifest given just class
+    def createManifest() = {
+      // If no type params, then clazz may be enough do instaniate
+      // (assuming a concrete class used)
+      new Manifest[ReflectionData[_]]() { 
+        def erasure = clazz
+      }
+    }
+
+    if (isPrimitiveType(clazz)) toPrimitiveManifest(clazz)
+    else settings.typeHintSettings.classes.get(parent) match {
+      case Some(map) => map.get(sym) match {
+        case Some(mf) => Some(mf)
+        case None => 
+          if (clazz.getTypeParameters.size == 0) Some(createManifest())
+          else None
+      }
+      case None => 
+        if (clazz.getTypeParameters.size == 0) Some(createManifest())
+        else None
+    }
   }
 }

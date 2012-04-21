@@ -48,7 +48,6 @@ object MetaTypesSpec extends Specification {
       true.mustEqual(true)  // Keep specs happy
     }
 
-    /* ONLY TEST IN ISOLATION
     "clean up the ObjectCache properly" in {
       var t = Test1("foo")
       t.addMeta('testit, "foo")
@@ -56,7 +55,7 @@ object MetaTypesSpec extends Specification {
       Thread.sleep(100)
       System.gc
       ObjectCache.size.mustEqual(0) 
-    } */ 
+    }
   }
 }
 
