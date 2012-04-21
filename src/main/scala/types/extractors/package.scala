@@ -113,7 +113,7 @@ package object extractors {
     * Verifies that a list contains only type A during pattern matching.
     * It should be used in places where List[A] would normally be used
     * but can't be due to type erasure. Concrete versions of this trait
-    * can be found within this package (e.g.  [[scalafy.types.ListOfString]],
+    * can be found within this package (e.g.  [[scalafy.types.extractors.ListOfString]],
     * etc). The extraction operation is O(n).
     *
     * @author Mike Dreves
@@ -137,7 +137,7 @@ package object extractors {
 
   /** List[String] extractor
     *
-    * See [[scalafy.types.ListOfA]]
+    * See [[scalafy.types.extractors.ListOfA]]
     *
     * @author Mike Dreves
     */
@@ -149,7 +149,7 @@ package object extractors {
 
   /** List[Int] extractor
     *
-    * See [[scalafy.types.ListOfA]]
+    * See [[scalafy.types.extractors.ListOfA]]
     *
     * @author Mike Dreves
     */
@@ -161,7 +161,7 @@ package object extractors {
 
   /** List[Short] extractor
     *
-    * See [[scalafy.types.ListOfA]]
+    * See [[scalafy.types.extractors.ListOfA]]
     *
     * @author Mike Dreves
     */
@@ -173,7 +173,7 @@ package object extractors {
 
   /** List[Long] extractor
     *
-    * See [[scalafy.types.ListOfA]]
+    * See [[scalafy.types.extractors.ListOfA]]
     *
     * @author Mike Dreves
     */
@@ -185,7 +185,7 @@ package object extractors {
 
   /** List[Float] extractor
     *
-    * See [[scalafy.types.ListOfA]]
+    * See [[scalafy.types.extractors.ListOfA]]
     *
     * @author Mike Dreves
     */
@@ -197,7 +197,7 @@ package object extractors {
 
   /** List[Double] extractor
     *
-    * See [[scalafy.types.ListOfA]]
+    * See [[scalafy.types.extractors.ListOfA]]
     *
     * @author Mike Dreves
     */
@@ -209,7 +209,7 @@ package object extractors {
 
   /** List[Boolean] extractor
     *
-    * See [[scalafy.types.ListOfA]]
+    * See [[scalafy.types.extractors.ListOfA]]
     *
     * @author Mike Dreves
     */
@@ -221,7 +221,7 @@ package object extractors {
 
   /** List[Char] extractor
     *
-    * See [[scalafy.types.ListOfA]]
+    * See [[scalafy.types.extractors.ListOfA]]
     *
     * @author Mike Dreves
     */
@@ -233,7 +233,7 @@ package object extractors {
 
   /** List[Byte] extractor
     *
-    * See [[scalafy.types.ListOfA]]
+    * See [[scalafy.types.extractors.ListOfA]]
     *
     * @author Mike Dreves
     */
@@ -245,16 +245,16 @@ package object extractors {
 
   /** Map[A, B] extractor
     *
-    * Verifies that a map contains only (A, B) pairs during pattern
-    * matching. It should be used in places where Map[A, B] would
-    * normally be used but can't be due to type erasure. Concrete
-    * version of this trait can be found within this package
-    * (e.g. [[scalafy.types.MapOfStringToString]], etc). Those objects
-    * (and this trait) are expected to be used in combination with
-    * the -> object and as an alternative to the more general Map object
-    * defined in this package (although the Map object can be used in
-    * combination with this one). Note that extractor returns a key/value
-    * sequence not a Map. The extraction operation is O(n).
+    * Verifies that a map contains only (A, B) pairs during pattern matching.
+    * It should be used in places where Map[A, B] would normally be used but
+    * can't be due to type erasure. Concrete version of this trait can be
+    * found within this package (e.g.
+    * [[scalafy.types.extractors.MapOfStringToString]], etc). Those objects
+    * (and this trait) are expected to be used in combination with the ->
+    * object and as an alternative to the more general Map object defined in
+    * this package (although the Map object can be used in combination with
+    * this one). Note that extractor returns a key/value sequence not a Map.
+    * The extraction operation is O(n).
     *
     * @author Mike Dreves
     */
@@ -287,7 +287,7 @@ package object extractors {
 
   /** Map[String, String] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -301,7 +301,7 @@ package object extractors {
 
   /** Map[String, Int] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -315,7 +315,7 @@ package object extractors {
 
   /** Map[String, Short] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -329,7 +329,7 @@ package object extractors {
 
   /** Map[String, Long] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -343,7 +343,7 @@ package object extractors {
 
   /** Map[String, Float] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -357,7 +357,7 @@ package object extractors {
 
   /** Map[String, Double] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -371,7 +371,7 @@ package object extractors {
 
   /** Map[String, Boolean] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -385,7 +385,7 @@ package object extractors {
 
   /** Map[String, Char] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -399,7 +399,7 @@ package object extractors {
 
   /** Map[String, Byte] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -413,7 +413,7 @@ package object extractors {
 
   /** Map[Int, String] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -427,7 +427,7 @@ package object extractors {
 
   /** Map[Int, Int] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -441,7 +441,7 @@ package object extractors {
 
   /** Map[Int, Short] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -455,7 +455,7 @@ package object extractors {
 
   /** Map[Int, Long] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -469,7 +469,7 @@ package object extractors {
 
   /** Map[Int, Float] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -483,7 +483,7 @@ package object extractors {
 
   /** Map[Int, Double] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -497,7 +497,7 @@ package object extractors {
 
   /** Map[Int, Boolean] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -511,7 +511,7 @@ package object extractors {
 
   /** Map[Int, Char] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -525,7 +525,7 @@ package object extractors {
 
   /** Map[Int, Byte] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -539,7 +539,7 @@ package object extractors {
 
   /** Map[Short, String] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -553,7 +553,7 @@ package object extractors {
 
   /** Map[Short, Int] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -567,7 +567,7 @@ package object extractors {
 
   /** Map[Short, Short] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -581,7 +581,7 @@ package object extractors {
 
   /** Map[Short, Long] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -595,7 +595,7 @@ package object extractors {
 
   /** Map[Short, Float] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -609,7 +609,7 @@ package object extractors {
 
   /** Map[Short, Double] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -623,7 +623,7 @@ package object extractors {
 
   /** Map[Short, Boolean] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -637,7 +637,7 @@ package object extractors {
 
   /** Map[Short, Char] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -651,7 +651,7 @@ package object extractors {
 
   /** Map[Short, Byte] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -665,7 +665,7 @@ package object extractors {
 
   /** Map[Long, String] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -679,7 +679,7 @@ package object extractors {
 
   /** Map[Long, Int] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -693,7 +693,7 @@ package object extractors {
 
   /** Map[Long, Short] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -707,7 +707,7 @@ package object extractors {
 
   /** Map[Long, Long] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -721,7 +721,7 @@ package object extractors {
 
   /** Map[Long, Float] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -735,7 +735,7 @@ package object extractors {
 
   /** Map[Long, Double] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -749,7 +749,7 @@ package object extractors {
 
   /** Map[Long, Boolean] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -763,7 +763,7 @@ package object extractors {
 
   /** Map[Long, Char] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -777,7 +777,7 @@ package object extractors {
 
   /** Map[Long, Byte] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -791,7 +791,7 @@ package object extractors {
 
   /** Map[Float, String] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -805,7 +805,7 @@ package object extractors {
 
   /** Map[Float, Int] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -819,7 +819,7 @@ package object extractors {
 
   /** Map[Float, Short] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -833,7 +833,7 @@ package object extractors {
 
   /** Map[Float, Long] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -847,7 +847,7 @@ package object extractors {
 
   /** Map[Float, Float] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -861,7 +861,7 @@ package object extractors {
 
   /** Map[Float, Double] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -875,7 +875,7 @@ package object extractors {
 
   /** Map[Float, Boolean] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -889,7 +889,7 @@ package object extractors {
 
   /** Map[Float, Char] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -903,7 +903,7 @@ package object extractors {
 
   /** Map[Float, Byte] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -917,7 +917,7 @@ package object extractors {
 
   /** Map[Double, String] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -931,7 +931,7 @@ package object extractors {
 
   /** Map[Double, Int] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -945,7 +945,7 @@ package object extractors {
 
   /** Map[Double, Short] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -959,7 +959,7 @@ package object extractors {
 
   /** Map[Double, Long] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -973,7 +973,7 @@ package object extractors {
 
   /** Map[Double, Float] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -987,7 +987,7 @@ package object extractors {
 
   /** Map[Double, Double] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1001,7 +1001,7 @@ package object extractors {
 
   /** Map[Double, Boolean] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1015,7 +1015,7 @@ package object extractors {
 
   /** Map[Double, Char] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1029,7 +1029,7 @@ package object extractors {
 
   /** Map[Double, Byte] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1043,7 +1043,7 @@ package object extractors {
 
   /** Map[Boolean, String] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1057,7 +1057,7 @@ package object extractors {
 
   /** Map[Boolean, Int] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1071,7 +1071,7 @@ package object extractors {
 
   /** Map[Boolean, Short] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1085,7 +1085,7 @@ package object extractors {
 
   /** Map[Boolean, Long] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1099,7 +1099,7 @@ package object extractors {
 
   /** Map[Boolean, Float] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1113,7 +1113,7 @@ package object extractors {
 
   /** Map[Boolean, Double] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1127,7 +1127,7 @@ package object extractors {
 
   /** Map[Boolean, Boolean] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1141,7 +1141,7 @@ package object extractors {
 
   /** Map[Boolean, Char] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1155,7 +1155,7 @@ package object extractors {
 
   /** Map[Boolean, Byte] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1169,7 +1169,7 @@ package object extractors {
 
   /** Map[Char, String] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1183,7 +1183,7 @@ package object extractors {
 
   /** Map[Char, Int] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1197,7 +1197,7 @@ package object extractors {
 
   /** Map[Char, Short] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1211,7 +1211,7 @@ package object extractors {
 
   /** Map[Char, Long] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1225,7 +1225,7 @@ package object extractors {
 
   /** Map[Char, Float] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1239,7 +1239,7 @@ package object extractors {
 
   /** Map[Char, Double] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1253,7 +1253,7 @@ package object extractors {
 
   /** Map[Char, Boolean] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1267,7 +1267,7 @@ package object extractors {
 
   /** Map[Char, Char] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1281,7 +1281,7 @@ package object extractors {
 
   /** Map[Char, Byte] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1295,7 +1295,7 @@ package object extractors {
 
   /** Map[Byte, String] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1309,7 +1309,7 @@ package object extractors {
 
   /** Map[Byte, Int] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1323,7 +1323,7 @@ package object extractors {
 
   /** Map[Byte, Short] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1337,7 +1337,7 @@ package object extractors {
 
   /** Map[Byte, Long] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1351,7 +1351,7 @@ package object extractors {
 
   /** Map[Byte, Float] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1365,7 +1365,7 @@ package object extractors {
 
   /** Map[Byte, Double] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1379,7 +1379,7 @@ package object extractors {
 
   /** Map[Byte, Boolean] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1393,7 +1393,7 @@ package object extractors {
 
   /** Map[Byte, Char] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
@@ -1407,7 +1407,7 @@ package object extractors {
 
   /** Map[Byte, Byte] extractor
     *
-    * See [[scalafy.types.MapOfAToB]]
+    * See [[scalafy.types.extractorsMapOfAToB]]
     *
     * @author Mike Dreves
     */
