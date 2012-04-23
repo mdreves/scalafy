@@ -48,6 +48,7 @@ package util {
     *   classOf[Foo] -> 
     *     Map('xs -> manifest[List[Int]], 
     *         'xm -> manifest[Map[String, String]] ) ))
+    * }}}
     */
   class TypeHintSettings(
     val enums: List[Enumeration], 
